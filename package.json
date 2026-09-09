@@ -10,7 +10,7 @@
   "scripts": {
     "dev": "next dev --port 3001",
     "build": "next build && node postbuild.mjs",
-    "start": "next start",
+    "start": "node start.mjs",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
     "test": "node --test --experimental-strip-types \"**/*.test.ts\"",

@@ -20,7 +20,13 @@ function apiUrl(): string {
       'API_URL is not set. The admin reaches backend/api over it — see .env.example.',
     );
   }
-  return url.replace(/\/$/, '');
+  const trimmed = url.replace(/\/$/, '');
+  if (!/^https?:\/\//i.test(trimmed)) {
+    throw new Error(
+      `API_URL must include http:// or https:// (got "${url}"). Example: https://api.buildkart.co`,
+    );
+  }
+  return trimmed;
 }
 
 /**
