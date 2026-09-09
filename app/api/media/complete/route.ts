@@ -1,0 +1,22 @@
+import { NextResponse, type NextRequest } from 'next/server';
+import { api } from '@/lib/api/server';
+import { getCurrentAdmin } from '@/lib/auth/requireAdmin';
+import { UPLOAD_STATUS } from '@/lib/auth/httpStatus';
+
+export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
+
+/** Second half of the upload handshake — the API confirms the object landed. */
+export async function POST(request: NextRequest) {
+  const admin = await getCurrentAdmin();
+  if (!admin) return NextResponse.json({ error: 'Not signed in.' }, { status: 401 });
+
+  const result = await (await api()).operations.completeMedia.mutate(
+    await request.json().catch(() => null),
+  );
+
+  if (!result.ok) {
+    return NextResponse.json({ error: result.message }, { status: UPLOAD_STATUS[result.reason] });
+  }
+  return NextResponse.json(result.data, { headers: { 'Cache-Control': 'no-store' } });
+}

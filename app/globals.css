@@ -1,0 +1,292 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+/*
+ * BuildKart admin design tokens.
+ *
+ * The content area follows Shopify's admin closely — #f1f1f1 page behind white
+ * cards, near-black primary buttons, hairline #e3e3e3 borders — because the
+ * owner asked for an interface that behaves like the tool they already know.
+ * The navigation rail is where BuildKart's own identity lives: charcoal ground
+ * with the construction yellow reserved for the active item and nothing else.
+ *
+ * Rules for anyone adding tokens here:
+ *   - Yellow is an accent, never a surface. It marks state (active nav, a fresh
+ *     rate stamp), so the moment it decorates something it stops meaning
+ *     anything.
+ *   - Every value is defined on :root. Dark mode overrides come later; a token
+ *     whose only definition lives inside a media query breaks the light theme.
+ */
+
+:root {
+  --radius: 0.5rem;
+
+  /* Page and surfaces */
+  --background: #f1f1f1;
+  --foreground: #303030;
+  --card: #ffffff;
+  --card-foreground: #303030;
+  --popover: #ffffff;
+  --popover-foreground: #303030;
+
+  /* Primary action: Shopify's near-black button, not a saturated hue. */
+  --primary: #303030;
+  --primary-foreground: #ffffff;
+
+  --secondary: #ffffff;
+  --secondary-foreground: #303030;
+
+  --muted: #f7f7f7;
+  --muted-foreground: #616161;
+
+  --accent: #f1f1f1;
+  --accent-foreground: #303030;
+
+  --destructive: #e51c00;
+  --destructive-foreground: #ffffff;
+
+  --border: #e3e3e3;
+  --input: #8a8a8a;
+  --ring: #005bd3;
+
+  /* Navigation rail — BuildKart charcoal */
+  --nav: #2d333a;
+  --nav-foreground: #d8dbde;
+  --nav-muted: #9aa1a9;
+  --nav-hover: #3a4148;
+  --nav-active: #434b53;
+  --nav-border: #3a4148;
+
+  /* Brand */
+  --brand: #faae0a;
+  --brand-foreground: #2d333a;
+  --brand-subdued: #fdf4e0;
+
+  /* Status tones — background / text pairs, all AA on their own background */
+  --success: #29845a;
+  --success-bg: #cdfee1;
+  --success-fg: #0c5132;
+
+  --warning: #ffd84d;
+  --warning-bg: #fff1c2;
+  --warning-fg: #7f5b00;
+
+  --critical-bg: #ffede8;
+  --critical-fg: #8e1f0b;
+
+  --info-bg: #e3effd;
+  --info-fg: #00527c;
+
+  /* Neutral status, for Draft and other "no signal" states */
+  --neutral-bg: #e3e3e3;
+  --neutral-fg: #4a4a4a;
+
+  /*
+   * Chart roles.
+   *
+   * Two categorical slots, validated against the white card surface these
+   * render on (not against a generic light grey): worst-pair CVD deltaE 28.6,
+   * normal-vision 39.0, both clear of the floors, and both above 3:1 contrast.
+   * Series 1 is the admin's own interactive blue so a chart does not introduce
+   * a second blue. The brand yellow is deliberately absent — it marks state,
+   * and the moment it decorates a chart it stops meaning anything.
+   */
+  --chart-1: #005bd3;
+  --chart-2: #eb6834;
+  /* Hairline, one step off the surface, solid — never dashed. */
+  --chart-grid: #e3e3e3;
+  --chart-axis: #616161;
+
+  /*
+   * Polaris-style elevation: a hairline plus a single-pixel drop, never a soft
+   * ambient blur. Cards must read as sheets of paper, not floating panels.
+   */
+  --shadow-card: 0 1px 0 rgb(0 0 0 / 0.04);
+  --shadow-popover: 0 4px 12px rgb(0 0 0 / 0.12), 0 1px 3px rgb(0 0 0 / 0.08);
+  --shadow-bar: 0 -1px 0 rgb(0 0 0 / 0.06), 0 -4px 12px rgb(0 0 0 / 0.06);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-nav: var(--nav);
+  --color-nav-foreground: var(--nav-foreground);
+  --color-nav-muted: var(--nav-muted);
+  --color-nav-hover: var(--nav-hover);
+  --color-nav-active: var(--nav-active);
+  --color-nav-border: var(--nav-border);
+
+  --color-brand: var(--brand);
+  --color-brand-foreground: var(--brand-foreground);
+  --color-brand-subdued: var(--brand-subdued);
+
+  --color-success: var(--success);
+  --color-success-bg: var(--success-bg);
+  --color-success-fg: var(--success-fg);
+  --color-warning: var(--warning);
+  --color-warning-bg: var(--warning-bg);
+  --color-warning-fg: var(--warning-fg);
+  --color-critical-bg: var(--critical-bg);
+  --color-critical-fg: var(--critical-fg);
+  --color-info-bg: var(--info-bg);
+  --color-info-fg: var(--info-fg);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-neutral-fg: var(--neutral-fg);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-grid: var(--chart-grid);
+  --color-chart-axis: var(--chart-axis);
+
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --font-sans: var(--font-plex-sans), ui-sans-serif, system-ui, sans-serif;
+  --font-mono: var(--font-plex-mono), ui-monospace, 'SFMono-Regular', monospace;
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  /*
+   * The admin is an app shell, not a document: the sidebar and top bar stay
+   * put while only the content column scrolls. That needs an exact height
+   * chain from the viewport, hence 100% here rather than a viewport unit on
+   * the shell — `svh` resolves to the *small* viewport and can come out
+   * shorter than the real one, which leaves the shell short and hands the
+   * body a second scrollbar of its own.
+   */
+  html,
+  body {
+    height: 100%;
+  }
+
+  /*
+   * Only the admin shell clamps the document.
+   *
+   * The height chain alone is not enough. Recharts appends a measurement <span>
+   * to the body at `top: -20000px` to size its labels; an absolutely positioned
+   * node that far outside the box grows the *document's* scrollable area even
+   * though every element in the layout fits. That put a second scrollbar beside
+   * the content one on any page with a chart — measured at 322px of phantom
+   * overflow on the dashboard against 0 on a page without charts. Clamping
+   * fixes the whole class rather than that one span: nothing a library appends
+   * to the body can scroll the document, and #admin-main stays the only
+   * scroller.
+   *
+   * Scoped with :has() rather than applied globally because the printable order
+   * slip and the login page render outside the shell — they are ordinary
+   * documents, and clamping them would cut off anything past the first screen
+   * with no way to reach it.
+   */
+  html:has(#admin-main),
+  html:has(#admin-main) body {
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    /* Admin copy is dense; 13px is Shopify's own body size and it is what makes
+       a 12-column index table readable without horizontal scrolling. */
+    font-size: 13px;
+    line-height: 1.4;
+  }
+
+  /*
+   * Money, stock counts and any column the eye scans vertically. Proportional
+   * digits make a price column ragged and genuinely harder to compare.
+   */
+  .tabular {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'tnum';
+  }
+
+  /* Keyboard focus only — a visible ring on every mouse click is noise. */
+  :focus-visible {
+    @apply outline-ring outline-2 outline-offset-1;
+  }
+
+  /* Chrome/Safari strip the spinners; quantity steppers supply their own. */
+  input[type='number']::-webkit-outer-spin-button,
+  input[type='number']::-webkit-inner-spin-button {
+    -webkit-appearance: none;
+    margin: 0;
+  }
+  input[type='number'] {
+    -moz-appearance: textfield;
+  }
+}
+
+@media print {
+  /* Order slips and invoices print from the same page they are viewed on. */
+  .no-print {
+    display: none !important;
+  }
+  body {
+    background: #fff;
+    font-size: 12px;
+  }
+}
+
+/*
+ * The rich-text editor's content area.
+ *
+ * Scoped to `.prose-editor` rather than applied globally: this is the one place
+ * in the admin where raw semantic HTML is rendered, and Tailwind's preflight
+ * otherwise strips headings and lists back to plain text — which would make the
+ * editor look like it was not working.
+ *
+ * The selectors mirror the sanitiser's allowlist, so what is typed here is what
+ * survives the save.
+ */
+.prose-editor {
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+.prose-editor > * + * { margin-top: 0.75em; }
+.prose-editor h2 { font-size: 1.25rem; font-weight: 600; line-height: 1.3; }
+.prose-editor h3 { font-size: 1.05rem; font-weight: 600; line-height: 1.35; }
+.prose-editor h4 { font-size: 0.95rem; font-weight: 600; }
+.prose-editor strong { font-weight: 600; }
+.prose-editor em { font-style: italic; }
+.prose-editor ul { list-style: disc; padding-left: 1.5rem; }
+.prose-editor ol { list-style: decimal; padding-left: 1.5rem; }
+.prose-editor li > * + * { margin-top: 0.25em; }
+.prose-editor a { color: var(--nav); text-decoration: underline; }
+.prose-editor blockquote {
+  border-left: 3px solid var(--border);
+  padding-left: 0.875rem;
+  color: var(--muted-foreground);
+}
+.prose-editor hr { border-top: 1px solid var(--border); }
+.prose-editor img { border-radius: 0.375rem; max-width: 100%; height: auto; }
+.prose-editor table { width: 100%; border-collapse: collapse; }
+.prose-editor th,
+.prose-editor td { border: 1px solid var(--border); padding: 0.375rem 0.5rem; text-align: left; }
+.prose-editor th { font-weight: 600; background: var(--muted); }
+/* ProseMirror marks the empty document; without a height the editor is unclickable. */
+.prose-editor:focus { outline: none; }

@@ -1,0 +1,27 @@
+# dependencies
+node_modules/
+
+# next
+.next/
+out/
+next-env.d.ts
+
+# turbo
+.turbo/
+
+# env — this app's configuration. Two keys, neither of them a database
+# credential; see .env.example.
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# logs
+*.log
+npm-debug.log*
+
+# editors / os
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
