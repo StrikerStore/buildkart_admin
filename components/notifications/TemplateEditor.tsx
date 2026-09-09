@@ -17,7 +17,7 @@ import {
   type NotificationChannel,
   type NotificationEvent,
   type NotificationTemplateDto,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { AlertCircleIcon, ImageIcon, LoaderCircleIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import { scrollMainToTop } from '@/lib/scroll';
-import { slugify, buildMediaUrl, ADMIN_THUMB_2X } from '@buildkart/contract';
+import { slugify, buildMediaUrl, ADMIN_THUMB_2X } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,9 +26,9 @@ import {
   type PickedImage,
 } from '@/components/media/ProductImages';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
-import type { CategoryMatch, TagRule } from '@buildkart/contract';
+import type { CategoryMatch, TagRule } from '@StrikerStore/contract';
 import { createCategory, updateCategory, deleteCategory } from '@/app/(dashboard)/categories/actions';
-import type { CategoryDto } from '@buildkart/contract';
+import type { CategoryDto } from '@StrikerStore/contract';
 
 /** `null` id means this is the create form. */
 export type CategoryFormInitial = {

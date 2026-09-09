@@ -12,7 +12,7 @@ import {
   PAYMENT_STATUS_LABELS,
   PAYMENT_GATEWAYS,
   PAYMENT_GATEWAY_LABELS,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import {
   Select,

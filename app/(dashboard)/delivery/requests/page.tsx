@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { MapPinnedIcon } from 'lucide-react';
-import { formatStoreDate } from '@buildkart/contract';
+import { formatStoreDate } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { NotifyRequestsButton } from '@/components/delivery/NotifyRequestsButton';

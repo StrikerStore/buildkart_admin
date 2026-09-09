@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { NOTIFICATION_CHANNELS, type NotificationChannel } from '@buildkart/contract';
+import { NOTIFICATION_CHANNELS, type NotificationChannel } from '@StrikerStore/contract';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EventMatrix } from '@/components/notifications/EventMatrix';

@@ -12,7 +12,7 @@ import {
   ORDER_STATUS_LABELS,
   type AnalyticsRange,
   type OrderStatus,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { StatTile } from '@/components/dashboard/StatTile';
 import { RangeFilter } from '@/components/dashboard/RangeFilter';

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { formatStoreDateTime } from '@buildkart/contract';
+import { formatStoreDateTime } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { ProfileForm, PasswordForm } from '@/components/settings/AccountForms';

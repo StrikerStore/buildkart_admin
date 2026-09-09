@@ -11,7 +11,7 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { ANNOUNCEMENT_TEXT_LIMIT, type AnnouncementBarDto } from '@buildkart/contract';
+import { ANNOUNCEMENT_TEXT_LIMIT, type AnnouncementBarDto } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

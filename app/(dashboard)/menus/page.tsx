@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { MENU_HANDLES, MENU_LABELS, type MenuHandle } from '@buildkart/contract';
+import { MENU_HANDLES, MENU_LABELS, type MenuHandle } from '@StrikerStore/contract';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { MenuBuilder } from '@/components/content/MenuBuilder';
 import { requirePermission } from '@/lib/auth/requireAdmin';

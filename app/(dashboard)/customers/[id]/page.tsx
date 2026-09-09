@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PlusIcon } from 'lucide-react';
-import { formatINR, formatStoreDate, formatStoreDateTimeShort } from '@buildkart/contract';
+import { formatINR, formatStoreDate, formatStoreDateTimeShort } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/orders/OrderStatusBadge';

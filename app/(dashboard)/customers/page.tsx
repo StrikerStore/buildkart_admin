@@ -6,7 +6,7 @@ import {
   customerListQuerySchema,
   formatINR,
   formatStoreDateTimeShort,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { CustomerFilters } from '@/components/customers/CustomerFilters';

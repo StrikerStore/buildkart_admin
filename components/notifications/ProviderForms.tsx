@@ -11,7 +11,7 @@ import {
   WHATSAPP_PROVIDERS,
   type NotificationProvidersDto,
   type SecretFieldDto,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

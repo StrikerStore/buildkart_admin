@@ -3,14 +3,14 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { ChevronDownIcon, ChevronRightIcon } from 'lucide-react';
-import type { AuditLogEntryDto } from '@buildkart/contract';
+import type { AuditLogEntryDto } from '@StrikerStore/contract';
 import {
   describeAction,
   describeEntity,
   formatStoreDateTime,
   formatStoreDateTimeShort,
   linkForEntity,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { DiffViewer } from './DiffViewer';
 import { cn } from '@/lib/utils';
 

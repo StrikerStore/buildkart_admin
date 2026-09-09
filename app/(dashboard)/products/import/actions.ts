@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { ActionResult } from '@buildkart/contract';
+import type { ActionResult } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 
-import type { ImportOptions } from '@buildkart/contract';
+import type { ImportOptions } from '@StrikerStore/contract';
 
 /**
  * The import screens drive work that runs on the API.

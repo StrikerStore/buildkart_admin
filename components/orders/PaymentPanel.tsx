@@ -32,7 +32,7 @@ import {
   type PaymentStatus,
   type PaymentTransactionStatus,
   type PaymentTransactionType,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -56,7 +56,7 @@ import {
   deletePaymentTransaction,
   recordPaymentTransaction,
 } from '@/app/(dashboard)/orders/actions';
-import type { PaymentTransactionDto } from '@buildkart/contract';
+import type { PaymentTransactionDto } from '@StrikerStore/contract';
 import { cn } from '@/lib/utils';
 
 /** Renders the current instant as the `YYYY-MM-DDTHH:mm` a datetime-local wants. */

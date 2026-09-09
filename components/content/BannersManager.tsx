@@ -22,7 +22,7 @@ import {
   BANNER_PLACEMENT_LABELS,
   BANNER_PLACEMENT_SIZES,
   type BannerPlacement,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -54,7 +54,7 @@ import {
   setBannerActive,
 } from '@/app/(dashboard)/banners/actions';
 import { cn } from '@/lib/utils';
-import type { BannerDto } from '@buildkart/contract';
+import type { BannerDto } from '@StrikerStore/contract';
 
 function toLocalInput(iso: string | null): string {
   if (!iso) return '';

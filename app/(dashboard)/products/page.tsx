@@ -9,7 +9,7 @@ import {
   ChevronLeftIcon,
   ChevronRightIcon,
 } from 'lucide-react';
-import { productListQuerySchema } from '@buildkart/contract';
+import { productListQuerySchema } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { ProductFilters } from '@/components/products/ProductFilters';

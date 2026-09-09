@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import { formatStoreDateTimeShort, type SupportMessageDto } from '@buildkart/contract';
+import { formatStoreDateTimeShort, type SupportMessageDto } from '@StrikerStore/contract';
 import { cn } from '@/lib/utils';
 
 /**

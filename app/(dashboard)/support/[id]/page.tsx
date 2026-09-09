@@ -7,7 +7,7 @@ import {
   formatStoreDate,
   formatStoreDateTimeShort,
   supportTopicLabel,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { SupportThread } from '@/components/support/SupportThread';

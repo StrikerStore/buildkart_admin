@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { PlusIcon, Trash2Icon } from 'lucide-react';
-import { SUPPORT_MESSAGE_MAX, type SupportCannedReplyDto } from '@buildkart/contract';
+import { SUPPORT_MESSAGE_MAX, type SupportCannedReplyDto } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

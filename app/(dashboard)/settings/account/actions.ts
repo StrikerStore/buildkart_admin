@@ -2,7 +2,7 @@
 
 import { revalidatePath } from 'next/cache';
 import { cookies } from 'next/headers';
-import type { ActionResult } from '@buildkart/contract';
+import type { ActionResult } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/cookie';
 

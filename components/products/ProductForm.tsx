@@ -17,7 +17,7 @@ import {
   emptyVariantDraft,
   type OptionAxisDraft,
   type VariantDraft,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -39,7 +39,7 @@ import {
 } from '@/components/media/ProductImages';
 import { TagInput } from './TagInput';
 import { BrandInput } from './BrandInput';
-import type { TaxRateDto } from '@buildkart/contract';
+import type { TaxRateDto } from '@StrikerStore/contract';
 import { TaxSection, type TaxState } from './TaxSection';
 import { InventorySection, PricingSection } from './PricingSection';
 import { MetafieldFieldset, type MetafieldDefinitionDto } from './MetafieldFieldset';

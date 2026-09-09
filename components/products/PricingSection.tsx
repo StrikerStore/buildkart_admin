@@ -1,6 +1,6 @@
 'use client';
 
-import { MONEY_PATTERN, formatINR, discountPercent, type VariantDraft } from '@buildkart/contract';
+import { MONEY_PATTERN, formatINR, discountPercent, type VariantDraft } from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';

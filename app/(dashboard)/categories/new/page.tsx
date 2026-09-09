@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { emptyCategoryForm } from '@buildkart/contract';
+import { emptyCategoryForm } from '@StrikerStore/contract';
 import { api, serverConfig } from '@/lib/api/server';
 import { CategoryForm } from '@/components/categories/CategoryForm';
 import { requireAdmin } from '@/lib/auth/requireAdmin';

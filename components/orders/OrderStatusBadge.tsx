@@ -5,7 +5,7 @@ import {
   type OrderStatus,
   type OrderTone,
   type PaymentStatus,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { cn } from '@/lib/utils';
 
 const TONE_CLASSES: Record<OrderTone, string> = {

@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { PlusIcon, XIcon, GripVerticalIcon } from 'lucide-react';
-import { MAX_OPTION_AXES, type OptionAxisDraft } from '@buildkart/contract';
+import { MAX_OPTION_AXES, type OptionAxisDraft } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';

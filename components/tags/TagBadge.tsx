@@ -1,5 +1,5 @@
 import { cn } from '@/lib/utils';
-import type { TagScope, TagTone } from '@buildkart/contract';
+import type { TagScope, TagTone } from '@StrikerStore/contract';
 
 /**
  * Tone maps to meaning, not to a fixed colour, so the palette can change

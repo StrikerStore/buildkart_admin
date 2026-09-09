@@ -4,7 +4,7 @@ import { useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { CheckIcon, RotateCcwIcon } from 'lucide-react';
-import type { SupportThreadDto } from '@buildkart/contract';
+import type { SupportThreadDto } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { setTicketStatus } from '@/app/(dashboard)/support/actions';
 

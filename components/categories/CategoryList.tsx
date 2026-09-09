@@ -24,7 +24,7 @@ import { GripVerticalIcon, CornerDownRightIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
 import { reorderCategories } from '@/app/(dashboard)/categories/actions';
-import type { CategoryDto } from '@buildkart/contract';
+import type { CategoryDto } from '@StrikerStore/contract';
 
 function StatusBadge({ isActive }: { isActive: boolean }) {
   return (

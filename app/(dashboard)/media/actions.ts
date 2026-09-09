@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { ActionResult } from '@buildkart/contract';
+import type { ActionResult } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 
 export async function updateMediaAltText(id: string, input: unknown): Promise<ActionResult> {

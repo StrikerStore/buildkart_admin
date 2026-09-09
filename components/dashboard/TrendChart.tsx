@@ -9,7 +9,7 @@ import {
   XAxis,
   YAxis,
 } from 'recharts';
-import { formatDayKey, formatINR, moneyAxisFormatter, type DailyPoint } from '@buildkart/contract';
+import { formatDayKey, formatINR, moneyAxisFormatter, type DailyPoint } from '@StrikerStore/contract';
 
 type Metric = 'revenue' | 'orders';
 

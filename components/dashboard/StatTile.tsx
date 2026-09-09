@@ -1,5 +1,5 @@
 import { ArrowDownRightIcon, ArrowUpRightIcon } from 'lucide-react';
-import { formatPercentChange } from '@buildkart/contract';
+import { formatPercentChange } from '@StrikerStore/contract';
 import { cn } from '@/lib/utils';
 
 /**

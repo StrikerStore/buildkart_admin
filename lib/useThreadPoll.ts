@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import type { SupportMessageDto, SupportThreadDto } from '@buildkart/contract';
+import type { SupportMessageDto, SupportThreadDto } from '@StrikerStore/contract';
 
 /**
  * Adaptive polling, in place of a socket.

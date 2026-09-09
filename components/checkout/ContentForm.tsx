@@ -3,7 +3,7 @@
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import type { CheckoutConfigDto } from '@buildkart/contract';
+import type { CheckoutConfigDto } from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { saveCheckoutContent } from '@/app/(dashboard)/checkout/actions';

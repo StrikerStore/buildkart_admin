@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { ActionResult } from '@buildkart/contract';
+import type { ActionResult } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 
 /** The new-order form prefills its delivery charge from these. */

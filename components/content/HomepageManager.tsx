@@ -21,7 +21,7 @@ import {
   TRUST_MARKER_LABELS,
   type HomepageSectionType,
   type TrustMarker,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -49,7 +49,7 @@ import {
   setHomepageSectionActive,
 } from '@/app/(dashboard)/homepage/actions';
 import { cn } from '@/lib/utils';
-import type { HomepageSectionDto } from '@buildkart/contract';
+import type { HomepageSectionDto } from '@StrikerStore/contract';
 
 type Option = { id: string; label: string };
 

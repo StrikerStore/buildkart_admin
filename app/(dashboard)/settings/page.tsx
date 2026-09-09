@@ -5,7 +5,7 @@ import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { CommerceSettingsForm, StoreProfileForm } from '@/components/settings/SettingsForms';
 import { getCurrentAdmin, requirePermission } from '@/lib/auth/requireAdmin';
-import { can } from '@buildkart/contract';
+import { can } from '@StrikerStore/contract';
 
 export const metadata: Metadata = { title: 'Settings' };
 

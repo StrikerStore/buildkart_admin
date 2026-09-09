@@ -16,7 +16,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { buildMediaUrl, ADMIN_THUMB_2X, ADMIN_PREVIEW, type MediaSortKey } from '@buildkart/contract';
+import { buildMediaUrl, ADMIN_THUMB_2X, ADMIN_PREVIEW, type MediaSortKey } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -33,7 +33,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useDirectUpload } from './useDirectUpload';
 import { updateMediaAltText, deleteMedia, deleteManyMedia } from '@/app/(dashboard)/media/actions';
-import type { MediaDto } from '@buildkart/contract';
+import type { MediaDto } from '@StrikerStore/contract';
 
 function formatBytes(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;

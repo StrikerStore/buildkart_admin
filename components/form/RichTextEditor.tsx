@@ -19,7 +19,7 @@ import {
   Undo2Icon,
   UnlinkIcon,
 } from 'lucide-react';
-import { buildMediaUrl, type MediaUrlContext } from '@buildkart/contract';
+import { buildMediaUrl, type MediaUrlContext } from '@StrikerStore/contract';
 import { MediaPickerDialog, type PickedImage } from '@/components/media/ProductImages';
 import { cn } from '@/lib/utils';
 

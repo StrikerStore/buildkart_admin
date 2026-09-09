@@ -26,7 +26,7 @@ const nextConfig = {
   output: 'standalone',
 
   /*
-   * No `transpilePackages` either. `@buildkart/contract` ships compiled
+   * No `transpilePackages` either. `@StrikerStore/contract` ships compiled
    * JavaScript with its own declarations — that is the whole point of the
    * package — so there is nothing left to transpile. `core` and `database` are
    * gone from this app entirely: it reaches data over HTTP, so there is no

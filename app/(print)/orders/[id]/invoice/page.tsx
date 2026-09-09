@@ -10,7 +10,7 @@ import {
   PAYMENT_METHOD_LABELS,
   PAYMENT_STATUS_LABELS,
   totalPayments,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
 import { PrintButton } from '@/components/orders/PrintButton';

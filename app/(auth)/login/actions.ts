@@ -1,7 +1,7 @@
 'use server';
 
 import { cookies } from 'next/headers';
-import { actionError, actionErrorFromZod, actionOk, loginSchema, type ActionResult } from '@buildkart/contract';
+import { actionError, actionErrorFromZod, actionOk, loginSchema, type ActionResult } from '@StrikerStore/contract';
 import { apiClient, apiErrorCode } from '@/lib/api/client';
 import { SESSION_COOKIE, sessionCookieOptions } from '@/lib/auth/cookie';
 

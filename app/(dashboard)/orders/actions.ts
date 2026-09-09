@@ -1,10 +1,10 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { ActionResult } from '@buildkart/contract';
+import type { ActionResult } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 
-import type { OrderStatus } from '@buildkart/contract';
+import type { OrderStatus } from '@StrikerStore/contract';
 
 /** Both order views change on every write, so they revalidate together. */
 function revalidateOrder(input: unknown) {

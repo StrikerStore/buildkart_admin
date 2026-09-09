@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { LoaderCircleIcon, CheckIcon, TrendingUpIcon, TrendingDownIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { MONEY_PATTERN, formatINR, normalizeMoney, toPaise, fromPaise } from '@buildkart/contract';
+import { MONEY_PATTERN, formatINR, normalizeMoney, toPaise, fromPaise } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {

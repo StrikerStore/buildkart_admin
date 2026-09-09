@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon, ShoppingBagIcon } from 'lucide-react';
-import { formatINR, orderListQuerySchema } from '@buildkart/contract';
+import { formatINR, orderListQuerySchema } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { OrderFilters } from '@/components/orders/OrderFilters';

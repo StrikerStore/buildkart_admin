@@ -1,4 +1,4 @@
-import { can } from '@buildkart/contract';
+import { can } from '@StrikerStore/contract';
 import { Toaster } from '@/components/ui/sonner';
 import { AdminShell } from '@/components/shell/AdminShell';
 import type { NavBadges } from '@/components/shell/AdminSidebar';

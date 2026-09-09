@@ -9,7 +9,7 @@ import {
   type CategoryMatch,
   type TagRule,
   type TagRuleOperator,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import {

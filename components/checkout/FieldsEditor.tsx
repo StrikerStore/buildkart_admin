@@ -20,7 +20,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { CHECKOUT_STEP_LABELS, type CheckoutFieldDto } from '@buildkart/contract';
+import { CHECKOUT_STEP_LABELS, type CheckoutFieldDto } from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { saveCheckoutFields } from '@/app/(dashboard)/checkout/actions';

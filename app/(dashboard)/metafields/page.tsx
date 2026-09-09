@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PlusIcon, SlidersHorizontalIcon, AlertCircleIcon } from 'lucide-react';
 import { api } from '@/lib/api/server';
-import { METAFIELD_TYPE_SPECS } from '@buildkart/contract';
+import { METAFIELD_TYPE_SPECS } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';

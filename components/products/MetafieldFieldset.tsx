@@ -2,17 +2,17 @@
 
 import { useId } from 'react';
 import { XIcon } from 'lucide-react';
-import { typeSpec } from '@buildkart/contract';
+import { typeSpec } from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 
-/* Produced by core and re-exported through `@buildkart/contract` as a type, so this
+/* Produced by core and re-exported through `@StrikerStore/contract` as a type, so this
  * app renders the shape without depending on the package that reaches the
  * database. The storefront will read the same shape for specifications. */
-export type { MetafieldDefinitionDto } from '@buildkart/contract';
-import type { MetafieldDefinitionDto } from '@buildkart/contract';
+export type { MetafieldDefinitionDto } from '@StrikerStore/contract';
+import type { MetafieldDefinitionDto } from '@StrikerStore/contract';
 
 /**
  * Renders the admin-defined custom fields on the product form.

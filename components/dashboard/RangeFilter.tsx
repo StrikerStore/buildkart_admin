@@ -2,7 +2,7 @@
 
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { useTransition } from 'react';
-import { ANALYTICS_RANGES, ANALYTICS_RANGE_LABELS } from '@buildkart/contract';
+import { ANALYTICS_RANGES, ANALYTICS_RANGE_LABELS } from '@StrikerStore/contract';
 import { cn } from '@/lib/utils';
 
 /**

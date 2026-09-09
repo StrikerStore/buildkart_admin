@@ -1,6 +1,6 @@
 import 'server-only';
 import { createTRPCClient, httpBatchLink, TRPCClientError } from '@trpc/client';
-import type { AppRouter } from '@buildkart/contract';
+import type { AppRouter } from '@StrikerStore/contract';
 
 /**
  * The admin's client for `backend/api`.

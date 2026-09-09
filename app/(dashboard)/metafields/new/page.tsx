@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { emptyMetafieldDefinitionForm } from '@buildkart/contract';
+import { emptyMetafieldDefinitionForm } from '@StrikerStore/contract';
 import { MetafieldDefinitionForm } from '@/components/metafields/MetafieldDefinitionForm';
 import { requirePermission } from '@/lib/auth/requireAdmin';
 

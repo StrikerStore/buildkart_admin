@@ -3,7 +3,7 @@ import { Suspense } from 'react';
 import {
   mediaListQuerySchema,
   MEDIA_PAGE_SIZE,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { MediaLibrary } from '@/components/media/MediaLibrary';
 import { requireAdmin } from '@/lib/auth/requireAdmin';

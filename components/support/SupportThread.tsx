@@ -9,7 +9,7 @@ import {
   type SupportCannedReplyDto,
   type SupportMessageDto,
   type SupportThreadDto,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import {

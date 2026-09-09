@@ -4,8 +4,8 @@ import {
   ORDER_FLOW,
   ORDER_STATUS_LABELS,
   type OrderStatus,
-} from '@buildkart/contract';
-import type { OrderEventDto } from '@buildkart/contract';
+} from '@StrikerStore/contract';
+import type { OrderEventDto } from '@StrikerStore/contract';
 import { cn } from '@/lib/utils';
 
 /**

@@ -3,12 +3,12 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { ImageIcon } from 'lucide-react';
-import { buildMediaUrl, formatINR, ADMIN_THUMB } from '@buildkart/contract';
+import { buildMediaUrl, formatINR, ADMIN_THUMB } from '@StrikerStore/contract';
 import { Checkbox } from '@/components/ui/checkbox';
 import { cn } from '@/lib/utils';
 import { TagBadge } from '@/components/tags/TagBadge';
 import { ProductBulkBar, type BulkTagOption } from './ProductBulkBar';
-import type { ProductListItemDto } from '@buildkart/contract';
+import type { ProductListItemDto } from '@StrikerStore/contract';
 
 function StatusPill({ status }: { status: ProductListItemDto['status'] }) {
   const styles = {

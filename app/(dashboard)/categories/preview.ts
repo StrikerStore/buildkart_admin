@@ -1,8 +1,8 @@
 'use server';
 
-import type { ActionResult, CategoryMatch, TagRule } from '@buildkart/contract';
-import type { MembershipPreviewDto, MembershipRowDto } from '@buildkart/contract';
-import { actionOk } from '@buildkart/contract';
+import type { ActionResult, CategoryMatch, TagRule } from '@StrikerStore/contract';
+import type { MembershipPreviewDto, MembershipRowDto } from '@StrikerStore/contract';
+import { actionOk } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 
 /**

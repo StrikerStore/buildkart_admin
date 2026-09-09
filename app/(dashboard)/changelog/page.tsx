@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Suspense } from 'react';
 import Link from 'next/link';
 import { ChevronRightIcon, HistoryIcon } from 'lucide-react';
-import { auditListQuerySchema } from '@buildkart/contract';
+import { auditListQuerySchema } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { AuditFilters } from '@/components/changelog/AuditFilters';

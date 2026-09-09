@@ -2,7 +2,7 @@ import 'server-only';
 import { cookies } from 'next/headers';
 import { redirect } from 'next/navigation';
 import { cache } from 'react';
-import { can, type AdminRole, type Permission } from '@buildkart/contract';
+import { can, type AdminRole, type Permission } from '@StrikerStore/contract';
 import { apiClient } from '@/lib/api/client';
 import { SESSION_COOKIE } from './cookie';
 

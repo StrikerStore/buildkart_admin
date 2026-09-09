@@ -21,7 +21,7 @@ import {
   verticalListSortingStrategy,
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
-import { PAGE_KIND_LABELS, type PageListItemDto } from '@buildkart/contract';
+import { PAGE_KIND_LABELS, type PageListItemDto } from '@StrikerStore/contract';
 import { Switch } from '@/components/ui/switch';
 import { reorderPages, setPagePublished } from '@/app/(dashboard)/pages/actions';
 import { cn } from '@/lib/utils';

@@ -19,7 +19,7 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { ImageIcon, XIcon, UploadIcon, LoaderCircleIcon, SearchIcon, CheckIcon } from 'lucide-react';
-import { buildMediaUrl, ADMIN_THUMB_2X } from '@buildkart/contract';
+import { buildMediaUrl, ADMIN_THUMB_2X } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import {
@@ -33,12 +33,12 @@ import { cn } from '@/lib/utils';
 import { useDirectUpload } from './useDirectUpload';
 
 /*
- * Both shapes live in `@buildkart/contract`: a media id and a CDN base URL carry
+ * Both shapes live in `@StrikerStore/contract`: a media id and a CDN base URL carry
  * no secret and need no database, so an app that only renders an `<img>` should
  * not have to reach for either. Re-exported here so the existing importers of
  * this module keep working unchanged.
  */
-import type { MediaImageDto, MediaUrlContext } from '@buildkart/contract';
+import type { MediaImageDto, MediaUrlContext } from '@StrikerStore/contract';
 
 export type PickedImage = MediaImageDto;
 export type { MediaUrlContext };

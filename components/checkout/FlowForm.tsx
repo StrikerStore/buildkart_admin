@@ -16,7 +16,7 @@ import {
   REQUIRED_STEPS,
   type CheckoutConfigDto,
   type CheckoutStep,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
 import {

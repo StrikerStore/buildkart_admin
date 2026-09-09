@@ -6,7 +6,7 @@ import {
   formatStoreDateTimeShort,
   supportInboxQuerySchema,
   supportTopicLabel,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { SupportFilters } from '@/components/support/SupportFilters';

@@ -1,5 +1,5 @@
 import type { Metadata } from 'next';
-import { discountState } from '@buildkart/contract';
+import { discountState } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { DiscountsManager } from '@/components/discounts/DiscountsManager';

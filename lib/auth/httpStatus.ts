@@ -1,4 +1,4 @@
-import type { UploadFailureReason } from '@buildkart/contract';
+import type { UploadFailureReason } from '@StrikerStore/contract';
 
 /**
  * Maps core's failure reasons onto HTTP.

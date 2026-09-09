@@ -8,7 +8,7 @@ import {
   formatINR,
   formatStoreDateTime,
   totalPayments,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';

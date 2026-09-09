@@ -4,9 +4,9 @@ import {
   formatStoreDateTimeShort,
   PAYMENT_GATEWAY_LABELS,
   PAYMENT_METHOD_LABELS,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { OrderStatusBadge, PaymentStatusBadge } from './OrderStatusBadge';
-import type { OrderListItemDto } from '@buildkart/contract';
+import type { OrderListItemDto } from '@StrikerStore/contract';
 
 /**
  * The orders index.

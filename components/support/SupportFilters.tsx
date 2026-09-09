@@ -3,7 +3,7 @@
 import { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SearchIcon, XIcon } from 'lucide-react';
-import { SUPPORT_INBOX_FILTERS, SUPPORT_INBOX_FILTER_LABELS } from '@buildkart/contract';
+import { SUPPORT_INBOX_FILTERS, SUPPORT_INBOX_FILTER_LABELS } from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';

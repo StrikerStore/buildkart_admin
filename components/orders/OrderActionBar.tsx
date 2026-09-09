@@ -12,7 +12,7 @@ import {
   ORDER_STATUS_ACTION_LABELS,
   ORDER_STATUS_LABELS,
   type OrderStatus,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';

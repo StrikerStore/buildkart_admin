@@ -14,7 +14,7 @@ import {
   type NotificationChannel,
   type NotificationEvent,
   type NotificationTemplateDto,
-} from '@buildkart/contract';
+} from '@StrikerStore/contract';
 import { TemplateEditor, type EditorTarget } from './TemplateEditor';
 import { cn } from '@/lib/utils';
 

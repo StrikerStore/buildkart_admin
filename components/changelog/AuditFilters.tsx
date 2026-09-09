@@ -3,8 +3,8 @@
 import { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SearchIcon, XIcon } from 'lucide-react';
-import type { AuditAdminOptionDto } from '@buildkart/contract';
-import { describeEntity } from '@buildkart/contract';
+import type { AuditAdminOptionDto } from '@StrikerStore/contract';
+import { describeEntity } from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import {
   Select,

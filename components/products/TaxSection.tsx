@@ -2,8 +2,8 @@
 
 import { useMemo } from 'react';
 import Link from 'next/link';
-import type { TaxRateDto } from '@buildkart/contract';
-import { formatINR, toPaise, fromPaise } from '@buildkart/contract';
+import type { TaxRateDto } from '@StrikerStore/contract';
+import { formatINR, toPaise, fromPaise } from '@StrikerStore/contract';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {

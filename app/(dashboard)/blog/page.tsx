@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { NewspaperIcon, PlusIcon } from 'lucide-react';
-import { ADMIN_THUMB, buildMediaUrl, formatStoreDateTimeShort } from '@buildkart/contract';
+import { ADMIN_THUMB, buildMediaUrl, formatStoreDateTimeShort } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { requirePermission } from '@/lib/auth/requireAdmin';
