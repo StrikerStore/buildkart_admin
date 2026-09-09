@@ -1,6 +1,11 @@
 /**
  * Starts the standalone Next server produced by `next build` + `postbuild.mjs`.
  * `next start` is incompatible with `output: 'standalone'`.
+ *
+ * Railway (and most PaaS) health-checks the container from outside. Next's
+ * standalone server binds to `process.env.HOSTNAME`; Railway sets that to the
+ * container id, so the proxy cannot reach it and the deploy is SIGTERM'd.
+ * Always listen on 0.0.0.0.
  */
 import { spawn } from 'node:child_process';
 import { existsSync, readdirSync } from 'node:fs';
@@ -33,9 +38,23 @@ if (!serverJs) {
 const child = spawn(process.execPath, [serverJs], {
   stdio: 'inherit',
   cwd: dirname(serverJs),
-  env: process.env,
+  env: {
+    ...process.env,
+    HOSTNAME: '0.0.0.0',
+    PORT: process.env.PORT ?? '3000',
+  },
 });
+
+const stop = (signal) => {
+  if (!child.killed) child.kill(signal);
+};
+
+process.on('SIGTERM', () => stop('SIGTERM'));
+process.on('SIGINT', () => stop('SIGINT'));
+
 child.on('exit', (code, signal) => {
-  if (signal) process.kill(process.pid, signal);
+  if (signal) {
+    process.exit(1);
+  }
   process.exit(code ?? 1);
 });
