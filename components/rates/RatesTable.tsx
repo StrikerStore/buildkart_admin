@@ -72,7 +72,16 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
     Object.fromEntries(
       rows.map((r) => [
         r.variantId,
-        { price: r.price, bulkPrice: r.bulkPrice, compareAtPrice: r.compareAtPrice },
+        {
+          price: r.price,
+          bulkPrice: r.bulkPrice,
+          /*
+           * `?? ''` because the API may not send this yet. Admin and the API
+           * deploy separately, and an undefined here would hand React an
+           * uncontrolled input that silently stops tracking what is typed.
+           */
+          compareAtPrice: r.compareAtPrice ?? '',
+        },
       ]),
     ),
   );
@@ -96,7 +105,7 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
         return (
           value.price !== row.price ||
           value.bulkPrice !== row.bulkPrice ||
-          value.compareAtPrice !== row.compareAtPrice
+          value.compareAtPrice !== (row.compareAtPrice ?? '')
         );
       }),
     [rows, draft],
@@ -264,7 +273,7 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
             const isChanged =
               value.price !== before.price ||
               value.bulkPrice !== before.bulkPrice ||
-              value.compareAtPrice !== before.compareAtPrice;
+              value.compareAtPrice !== (before.compareAtPrice ?? '');
             const priceValid = MONEY_PATTERN.test(value.price);
             const mrpTooLow = mrpBelowPrice(value);
             const mrpInvalid =
