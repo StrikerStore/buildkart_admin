@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useMemo, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircleIcon, LoaderCircleIcon, Trash2Icon, CopyIcon } from 'lucide-react';
 import { toast } from 'sonner';
@@ -15,7 +15,9 @@ import {
   validateMatrix,
   describeProblem,
   emptyVariantDraft,
+  matchesTagRules,
   type OptionAxisDraft,
+  type RuleCategoryDto,
   type VariantDraft,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
@@ -89,6 +91,7 @@ export function ProductForm({
   metafieldDefinitions,
   brandSuggestions,
   tagSuggestions,
+  ruleCategories,
   mediaCtx,
   bulkCutoff,
   taxRates,
@@ -99,6 +102,7 @@ export function ProductForm({
   metafieldDefinitions: MetafieldDefinitionDto[];
   brandSuggestions: string[];
   tagSuggestions: string[];
+  ruleCategories: RuleCategoryDto[];
   mediaCtx: MediaUrlContext;
   bulkCutoff: string;
   taxRates: TaxRateDto[];
@@ -123,6 +127,35 @@ export function ProductForm({
   const [brandName, setBrandName] = useState(initial.brandName);
   const [productType, setProductType] = useState(initial.productType);
   const [tagNames, setTagNames] = useState(initial.tagNames);
+  /*
+   * Which categories this product's tags would gather it into.
+   *
+   * Computed here rather than asked of the server, because it has to keep up
+   * with typing: the rules arrive keyed by tag slug and the form holds tag
+   * names, so slugifying the names lines the two up. It is the same
+   * `matchesTagRules` the product list runs on tag ids and the category page
+   * runs as SQL — one rule, read wherever it is needed.
+   */
+  const gatheredCategories = useMemo(() => {
+    const slugs = tagNames.map((name) => slugify(name)).filter(Boolean);
+    if (slugs.length === 0) return [];
+    const carried = new Set(slugs);
+
+    return ruleCategories
+      .filter(
+        (category) =>
+          category.id !== categoryId &&
+          matchesTagRules(category.autoRules, category.autoMatch, slugs),
+      )
+      .map((category) => {
+        // Name the tags that actually pulled it in, not the whole rule.
+        const because = category.autoRules
+          .filter((rule) => rule.operator === 'INCLUDES' && carried.has(rule.tagSlug))
+          .map((rule) => rule.tagSlug)
+          .join(', ');
+        return { id: category.id, nameEn: category.nameEn, because };
+      });
+  }, [tagNames, ruleCategories, categoryId]);
   const [images, setImages] = useState(initial.images);
   /*
    * A new product opens on the shop's default rate rather than at 0%.
@@ -771,6 +804,27 @@ export function ProductForm({
               </div>
 
               <TagInput value={tagNames} onChange={setTagNames} suggestions={tagSuggestions} />
+
+              {gatheredCategories.length > 0 && (
+                <div className="flex flex-col gap-1.5 border-t pt-3">
+                  <Label>Also appears in</Label>
+                  <ul className="flex flex-col gap-1">
+                    {gatheredCategories.map((category) => (
+                      <li
+                        key={category.id}
+                        className="flex flex-wrap items-baseline gap-x-1.5 text-xs"
+                      >
+                        <span className="font-medium">{category.nameEn}</span>
+                        <span className="text-muted-foreground">via {category.because}</span>
+                      </li>
+                    ))}
+                  </ul>
+                  <p className="text-muted-foreground text-xs">
+                    Gathered by these categories’ tag rules. Change the tags above to change
+                    this — it cannot be edited here.
+                  </p>
+                </div>
+              )}
             </section>
 
             <section className="bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-[var(--shadow-card)]">

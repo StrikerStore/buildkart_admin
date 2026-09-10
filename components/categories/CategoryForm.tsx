@@ -26,28 +26,20 @@ import {
   type PickedImage,
 } from '@/components/media/ProductImages';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
-import type { CategoryMatch, TagRule } from '@StrikerStore/contract';
+import type { CategoryFormInitialDto, CategoryMatch, TagSlugRule } from '@StrikerStore/contract';
 import { createCategory, updateCategory, deleteCategory } from '@/app/(dashboard)/categories/actions';
 import type { CategoryDto } from '@StrikerStore/contract';
 
-/** `null` id means this is the create form. */
-export type CategoryFormInitial = {
-  id: string | null;
-  nameEn: string;
-  nameHi: string;
-  slug: string;
-  descriptionEn: string;
-  descriptionHi: string;
-  parentId: string | null;
+/**
+ * `null` id means this is the create form.
+ *
+ * The shared DTO, narrowed only where the form needs a richer type than the
+ * wire carries: `image` is a picked image here rather than the raw media row.
+ * It used to be a hand-maintained copy of every field, which drifted the moment
+ * one side gained a column.
+ */
+export type CategoryFormInitial = Omit<CategoryFormInitialDto, 'image'> & {
   image: PickedImage | null;
-  isActive: boolean;
-  isRateVolatile: boolean;
-  seoTitle: string;
-  seoDescription: string;
-  productCount: number;
-  childCount: number;
-  autoMatch: CategoryMatch;
-  autoRules: TagRule[];
 };
 
 const NO_PARENT = '__root__';
@@ -80,7 +72,7 @@ export function CategoryForm({
   const [seoTitle, setSeoTitle] = useState(initial.seoTitle);
   const [seoDescription, setSeoDescription] = useState(initial.seoDescription);
   const [autoMatch, setAutoMatch] = useState<CategoryMatch>(initial.autoMatch);
-  const [autoRules, setAutoRules] = useState<TagRule[]>(initial.autoRules);
+  const [autoRules, setAutoRules] = useState<TagSlugRule[]>(initial.autoRules);
 
   const [formError, setFormError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});

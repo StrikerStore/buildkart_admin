@@ -7,7 +7,7 @@ import {
   describeTagRules,
   isRunnableRuleSet,
   type CategoryMatch,
-  type TagRule,
+  type TagSlugRule,
   type TagRuleOperator,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
@@ -25,7 +25,12 @@ import {
   type MembershipRow,
 } from '@/app/(dashboard)/categories/preview';
 
-export type RuleTagOption = { id: string; nameEn: string; scope: 'INTERNAL' | 'PUBLIC' };
+export type RuleTagOption = {
+  id: string;
+  slug: string;
+  nameEn: string;
+  scope: 'INTERNAL' | 'PUBLIC';
+};
 
 /**
  * Builds a category's automatic-membership rule and previews what it catches.
@@ -44,10 +49,10 @@ export function CategoryRuleBuilder({
 }: {
   categoryId: string | null;
   match: CategoryMatch;
-  rules: TagRule[];
+  rules: TagSlugRule[];
   tags: RuleTagOption[];
   onMatchChange: (next: CategoryMatch) => void;
-  onRulesChange: (next: TagRule[]) => void;
+  onRulesChange: (next: TagSlugRule[]) => void;
 }) {
   const [preview, setPreview] = useState<{
     total: number;
@@ -57,7 +62,7 @@ export function CategoryRuleBuilder({
   const [isLoading, startLoading] = useTransition();
 
   const nameOf = useCallback(
-    (tagId: string) => tags.find((t) => t.id === tagId)?.nameEn ?? 'unknown tag',
+    (slug: string) => tags.find((t) => t.slug === slug)?.nameEn ?? 'unknown tag',
     [tags],
   );
 
@@ -81,14 +86,31 @@ export function CategoryRuleBuilder({
   }, [rulesKey, categoryId]);
 
   function addRule(operator: TagRuleOperator) {
-    const used = new Set(rules.filter((r) => r.operator === operator).map((r) => r.tagId));
-    const next = tags.find((t) => !used.has(t.id));
+    const next = tags.find((t) => !isTaken(t.slug, operator));
     if (!next) return;
-    onRulesChange([...rules, { tagId: next.id, operator }]);
+    onRulesChange([...rules, { tagSlug: next.slug, operator }]);
   }
 
-  function updateRule(index: number, changes: Partial<TagRule>) {
-    onRulesChange(rules.map((r, i) => (i === index ? { ...r, ...changes } : r)));
+  /** Whether a (tag, operator) pair is already a condition. */
+  function isTaken(slug: string, operator: TagRuleOperator, ignoreIndex = -1) {
+    return rules.some(
+      (r, i) => i !== ignoreIndex && r.operator === operator && r.tagSlug === slug,
+    );
+  }
+
+  /*
+   * A change that would duplicate an existing condition is dropped rather than
+   * applied. The same (tag, operator) pair twice violates the unique key the
+   * rules are stored under, and the save would fail with a raw database error
+   * naming a constraint the owner has never heard of. `addRule` has always
+   * skipped used tags; this is the same guard for editing an existing row.
+   */
+  function updateRule(index: number, changes: Partial<TagSlugRule>) {
+    const current = rules[index];
+    if (!current) return;
+    const next = { ...current, ...changes };
+    if (isTaken(next.tagSlug, next.operator, index)) return;
+    onRulesChange(rules.map((r, i) => (i === index ? next : r)));
   }
 
   const includes = rules.filter((r) => r.operator === 'INCLUDES');
@@ -129,7 +151,7 @@ export function CategoryRuleBuilder({
           {rules.length > 0 && (
             <ul className="flex flex-col gap-2">
               {rules.map((rule, index) => (
-                <li key={`${rule.operator}-${rule.tagId}-${index}`} className="flex items-center gap-2">
+                <li key={`${rule.operator}-${rule.tagSlug}-${index}`} className="flex items-center gap-2">
                   <Select
                     value={rule.operator}
                     onValueChange={(v) => updateRule(index, { operator: v as TagRuleOperator })}
@@ -143,13 +165,16 @@ export function CategoryRuleBuilder({
                     </SelectContent>
                   </Select>
 
-                  <Select value={rule.tagId} onValueChange={(v) => updateRule(index, { tagId: v })}>
+                  <Select
+                    value={rule.tagSlug}
+                    onValueChange={(v) => updateRule(index, { tagSlug: v })}
+                  >
                     <SelectTrigger className="flex-1">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
                       {tags.map((tag) => (
-                        <SelectItem key={tag.id} value={tag.id}>
+                        <SelectItem key={tag.id} value={tag.slug}>
                           {tag.nameEn}
                           {tag.scope === 'INTERNAL' ? ' · internal' : ''}
                         </SelectItem>
@@ -194,6 +219,13 @@ export function CategoryRuleBuilder({
           {rules.some((r) => r.operator === 'EXCLUDES') && (
             <p className="text-muted-foreground text-xs">
               Excluded tags always apply, whichever match option is chosen.
+            </p>
+          )}
+
+          {runnable && (
+            <p className="text-muted-foreground text-xs">
+              Discounts that target this category apply only to products assigned to it by
+              hand. To discount the products a rule gathers, target the tag instead.
             </p>
           )}
         </>

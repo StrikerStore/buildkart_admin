@@ -1,6 +1,6 @@
 'use server';
 
-import type { ActionResult, CategoryMatch, TagRule } from '@StrikerStore/contract';
+import type { ActionResult, CategoryMatch, TagSlugRule } from '@StrikerStore/contract';
 import type { MembershipPreviewDto, MembershipRowDto } from '@StrikerStore/contract';
 import { actionOk } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
@@ -17,7 +17,7 @@ export type MembershipRow = MembershipRowDto;
 export async function previewCategoryMembership(input: {
   categoryId: string | null;
   autoMatch: CategoryMatch;
-  autoRules: TagRule[];
+  autoRules: TagSlugRule[];
 }): Promise<ActionResult<MembershipPreviewDto>> {
   const preview = await (await api()).catalog.categoryMembershipPreview.query({
     ...input,

@@ -113,9 +113,27 @@ export function ProductListTable({
                   <span className="block truncate font-medium">{product.nameEn}</span>
                   <span className="text-muted-foreground flex flex-wrap items-center gap-1.5 text-xs">
                     <span className="truncate">
-                      {[product.brandName, product.categoryName].filter(Boolean).join(' · ') ||
-                        'Uncategorised'}
+                      {product.brandName ||
+                        (product.categories.length === 0 ? 'Uncategorised' : '')}
                     </span>
+                    {/*
+                      Every category the product lands in, not just the one it is
+                      filed under: a tag rule can gather it into others, and the
+                      category page will list it there.
+                    */}
+                    {product.categories.map((category) => (
+                      <span
+                        key={category.id}
+                        className={cn(
+                          'shrink-0 truncate',
+                          category.viaRule &&
+                            'rounded-full bg-[var(--info-bg)] px-1.5 py-0.5 text-[11px] font-medium text-[var(--info-fg)]',
+                        )}
+                        title={category.viaRule ? 'Gathered by this category’s tag rule' : undefined}
+                      >
+                        {category.nameEn}
+                      </span>
+                    ))}
                     {product.tags.slice(0, 3).map((tag) => (
                       <TagBadge
                         key={tag.id}
