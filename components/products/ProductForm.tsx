@@ -509,7 +509,7 @@ export function ProductForm({
                 valueHi={bodyHi}
                 onChangeEn={setBodyEn}
                 onChangeHi={setBodyHi}
-                helpText="Basic HTML is allowed and is sanitised when saved."
+                helpText="Markdown works — ## for a heading, **bold**, - for a list. Basic HTML is allowed too, and everything is sanitised when saved."
                 maxLength={50_000}
               />
             </section>
@@ -540,7 +540,7 @@ export function ProductForm({
                 valueHi={faqsHi}
                 onChangeEn={setFaqsEn}
                 onChangeHi={setFaqsHi}
-                helpText="Paste the questions and answers in one go. Basic HTML is allowed and is sanitised when saved — a heading per question reads best."
+                helpText="Paste the questions and answers in one go. Markdown works — a ### heading per question reads best. Basic HTML is allowed too, and everything is sanitised when saved."
                 maxLength={20_000}
                 errorEn={fieldErrors.faqsEn}
               />
@@ -554,7 +554,7 @@ export function ProductForm({
                   valueHi={returnHi}
                   onChangeEn={setReturnEn}
                   onChangeHi={setReturnHi}
-                  helpText="This product's own terms — cement once opened is not the same as a sealed fitting. Basic HTML is allowed and is sanitised when saved."
+                  helpText="This product's own terms — cement once opened is not the same as a sealed fitting. Markdown works, and everything is sanitised when saved."
                   maxLength={5_000}
                   errorEn={fieldErrors.returnPolicyEn}
                 />
