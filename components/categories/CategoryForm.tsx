@@ -281,20 +281,30 @@ export function CategoryForm({
                     </span>
                   )}
                 </button>
-                <div className="text-muted-foreground flex flex-col items-start gap-1 text-xs">
-                  <p>
-                    Shown on the tile for this category on the storefront. Square,{' '}
-                    <strong className="font-medium">400 × 400</strong> or larger.
-                  </p>
-                  <p>Without one the tile shows the first letter of the name instead.</p>
+                <div className="flex min-w-0 flex-col items-start gap-1.5">
+                  <div className="text-muted-foreground flex flex-col gap-1 text-xs">
+                    <p>
+                      Shown on the tile for this category on the storefront. Square,{' '}
+                      <strong className="font-medium">400 × 400</strong> or larger.
+                    </p>
+                    <p>Without one the tile shows the first letter of the name instead.</p>
+                  </div>
+                  {/*
+                    A real button rather than a text link inside the help text.
+                    Removing the tile image is an action, and it was previously
+                    indistinguishable from the two sentences above it — the
+                    reason it read as "you can only add, never remove".
+                  */}
                   {image && (
-                    <button
-                      type="button"
-                      onClick={() => setImage(null)}
-                      className="hover:text-foreground underline-offset-2 hover:underline"
-                    >
-                      Remove
-                    </button>
+                    <div className="flex flex-wrap gap-2">
+                      <Button type="button" variant="outline" size="sm" onClick={() => setPicking(true)}>
+                        Replace
+                      </Button>
+                      <Button type="button" variant="outline" size="sm" onClick={() => setImage(null)}>
+                        <Trash2Icon className="size-4" />
+                        Remove
+                      </Button>
+                    </div>
                   )}
                 </div>
               </div>

@@ -41,6 +41,9 @@ import { useDirectUpload } from './useDirectUpload';
 import type { MediaImageDto, MediaUrlContext } from '@StrikerStore/contract';
 
 export type PickedImage = MediaImageDto;
+
+/** What the uploader accepts. One list, so the file dialog and a drop agree. */
+const ACCEPTED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/avif'];
 export type { MediaUrlContext };
 
 function thumbUrl(ctx: MediaUrlContext, r2Key: string, width = ADMIN_THUMB_2X): string | null {
@@ -98,11 +101,21 @@ function SortableThumb({
         </span>
       )}
 
+      {/*
+        Always visible, not revealed on hover.
+        
+        A hover-only control does not exist on a touch screen, and this admin is
+        used on a phone — there was no way to take a photo off a product there at
+        all. It is also the only destructive action in the grid, so hiding it
+        until the pointer lands in the right place made it hard to find on a
+        desktop too.
+      */}
       <button
         type="button"
         onClick={onRemove}
         aria-label={`Remove ${image.filename}`}
-        className="absolute top-1 right-1 rounded-full bg-[var(--nav)]/85 p-1 text-white opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100"
+        title="Remove this image"
+        className="absolute top-1 right-1 rounded-full bg-[var(--nav)]/70 p-1 text-white shadow-sm transition-colors hover:bg-[var(--critical-fg)] focus-visible:bg-[var(--critical-fg)]"
       >
         <XIcon className="size-3.5" />
       </button>
@@ -120,7 +133,15 @@ export function ProductImages({
   ctx: MediaUrlContext;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
+  const [isDropTarget, setIsDropTarget] = useState(false);
+  const [dropError, setDropError] = useState<string | null>(null);
   const inputRef = useRef<HTMLInputElement>(null);
+  /*
+   * `dragenter`/`dragleave` fire for every child the pointer crosses, so a
+   * single boolean flickers off the moment the cursor moves over the button
+   * inside the zone. Counting enters and leaves is the standard fix.
+   */
+  const dragDepth = useRef(0);
 
   const { items: uploads, isUploading, upload, clearFinished } = useDirectUpload({
     prefix: 'products',
@@ -150,6 +171,32 @@ export function ProductImages({
     const to = value.findIndex((i) => i.id === over.id);
     if (from === -1 || to === -1) return;
     onChange(arrayMove(value, from, to));
+  }
+
+  /** Files only — a thumbnail being dragged to reorder must not light this up. */
+  function hasFiles(event: React.DragEvent): boolean {
+    return Array.from(event.dataTransfer.types).includes('Files');
+  }
+
+  function onDropFiles(event: React.DragEvent) {
+    event.preventDefault();
+    dragDepth.current = 0;
+    setIsDropTarget(false);
+
+    const dropped = Array.from(event.dataTransfer.files);
+    const images = dropped.filter((file) => ACCEPTED_TYPES.includes(file.type));
+    if (images.length > 0) void upload(images);
+
+    // Say so rather than silently ignoring them: dropping a PDF and seeing
+    // nothing happen reads as the feature being broken.
+    const rejected = dropped.length - images.length;
+    if (rejected > 0) {
+      setDropError(
+        `${rejected} file${rejected === 1 ? '' : 's'} skipped — JPEG, PNG, WebP and AVIF only.`,
+      );
+    } else {
+      setDropError(null);
+    }
   }
 
   const inFlight = uploads.filter((u) => u.status !== 'done');
@@ -189,7 +236,46 @@ export function ProductImages({
         </ul>
       )}
 
-      <div className="flex flex-wrap gap-2">
+      {/*
+        The drop zone wraps the buttons rather than sitting beside them.
+        
+        Dropping files onto a page is invisible unless something says it is
+        possible, and a separate dashed box next to two buttons asks the owner
+        to choose between three things that do the same job. One target, three
+        ways in: drop, browse, or pick from what is already uploaded.
+      */}
+      <div
+        onDragEnter={(e) => {
+          if (!hasFiles(e)) return;
+          e.preventDefault();
+          dragDepth.current += 1;
+          setIsDropTarget(true);
+        }}
+        onDragOver={(e) => {
+          if (!hasFiles(e)) return;
+          // Without this the browser navigates to the dropped file.
+          e.preventDefault();
+          e.dataTransfer.dropEffect = 'copy';
+        }}
+        onDragLeave={(e) => {
+          if (!hasFiles(e)) return;
+          dragDepth.current -= 1;
+          if (dragDepth.current <= 0) {
+            dragDepth.current = 0;
+            setIsDropTarget(false);
+          }
+        }}
+        onDrop={onDropFiles}
+        className={cn(
+          'flex flex-col items-center gap-2 rounded-md border border-dashed px-3 py-4 transition-colors',
+          isDropTarget ? 'border-[var(--brand)] bg-[var(--info-bg)]' : 'border-input',
+        )}
+      >
+        <p className="text-muted-foreground text-center text-xs">
+          {isDropTarget ? 'Drop to upload' : 'Drag images here, or'}
+        </p>
+
+        <div className="flex flex-wrap justify-center gap-2">
         <Button
           type="button"
           variant="outline"
@@ -212,13 +298,16 @@ export function ProductImages({
           ref={inputRef}
           type="file"
           multiple
-          accept="image/jpeg,image/png,image/webp,image/avif"
+          accept={ACCEPTED_TYPES.join(',')}
           className="hidden"
           onChange={(e) => {
             void upload(Array.from(e.target.files ?? []));
             e.target.value = '';
           }}
         />
+        </div>
+
+        {dropError && <p className="text-[var(--critical-fg)] text-xs">{dropError}</p>}
       </div>
 
       {value.length > 1 && (

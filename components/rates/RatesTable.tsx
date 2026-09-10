@@ -27,9 +27,22 @@ export type RateRow = {
   unitLabel: string | null;
   price: string;
   bulkPrice: string;
+  /** The MRP, struck through on the storefront. Empty when there is none. */
+  compareAtPrice: string;
   /** ISO date of the last price change, or null if never. */
   priceUpdatedAt: string | null;
 };
+
+/**
+ * An MRP at or below the selling price is the one thing a struck-through
+ * "was ₹410" must never be — it would advertise a saving that is not there.
+ * The same rule the product form and the server both apply.
+ */
+function mrpBelowPrice(value: { price: string; compareAtPrice: string }): boolean {
+  if (value.compareAtPrice === '') return false;
+  if (!MONEY_PATTERN.test(value.compareAtPrice) || !MONEY_PATTERN.test(value.price)) return false;
+  return toPaise(value.compareAtPrice) <= toPaise(value.price);
+}
 
 function isToday(iso: string | null): boolean {
   if (!iso) return false;
@@ -53,8 +66,15 @@ function isToday(iso: string | null): boolean {
  */
 export function RatesTable({ rows }: { rows: RateRow[] }) {
   const router = useRouter();
-  const [draft, setDraft] = useState<Record<string, { price: string; bulkPrice: string }>>(() =>
-    Object.fromEntries(rows.map((r) => [r.variantId, { price: r.price, bulkPrice: r.bulkPrice }])),
+  const [draft, setDraft] = useState<
+    Record<string, { price: string; bulkPrice: string; compareAtPrice: string }>
+  >(() =>
+    Object.fromEntries(
+      rows.map((r) => [
+        r.variantId,
+        { price: r.price, bulkPrice: r.bulkPrice, compareAtPrice: r.compareAtPrice },
+      ]),
+    ),
   );
   const [isSaving, startSaving] = useTransition();
 
@@ -73,7 +93,11 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
       rows.filter((row) => {
         const value = draft[row.variantId];
         if (!value) return false;
-        return value.price !== row.price || value.bulkPrice !== row.bulkPrice;
+        return (
+          value.price !== row.price ||
+          value.bulkPrice !== row.bulkPrice ||
+          value.compareAtPrice !== row.compareAtPrice
+        );
       }),
     [rows, draft],
   );
@@ -82,10 +106,18 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
     const value = draft[row.variantId]!;
     if (!MONEY_PATTERN.test(value.price)) return true;
     if (value.bulkPrice !== '' && !MONEY_PATTERN.test(value.bulkPrice)) return true;
+    if (value.compareAtPrice !== '' && !MONEY_PATTERN.test(value.compareAtPrice)) return true;
+    // Caught here as well as on the server, because the server rejects the
+    // whole save and the owner would lose a screen of typing to one bad row.
+    if (mrpBelowPrice(value)) return true;
     return false;
   });
 
-  function set(variantId: string, field: 'price' | 'bulkPrice', value: string) {
+  function set(
+    variantId: string,
+    field: 'price' | 'bulkPrice' | 'compareAtPrice',
+    value: string,
+  ) {
     setDraft((current) => ({
       ...current,
       [variantId]: { ...current[variantId]!, [field]: value },
@@ -131,6 +163,7 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
           variantId: row.variantId,
           price: normalizeMoney(draft[row.variantId]!.price),
           bulkPrice: draft[row.variantId]!.bulkPrice,
+          compareAtPrice: draft[row.variantId]!.compareAtPrice,
         })),
       });
 
@@ -218,7 +251,8 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
         <div className="text-muted-foreground bg-muted/40 flex items-center gap-3 border-b px-3 py-2 text-xs font-medium">
           <span className="min-w-0 flex-1">Product</span>
           <span className="hidden w-[110px] shrink-0 text-right sm:block">Current</span>
-          <span className="w-[120px] shrink-0">New price</span>
+          <span className="hidden w-[110px] shrink-0 md:block">MRP</span>
+          <span className="w-[120px] shrink-0">Selling price</span>
           <span className="hidden w-[120px] shrink-0 md:block">Bulk price</span>
           <span className="hidden w-[90px] shrink-0 text-right lg:block">Updated</span>
         </div>
@@ -227,8 +261,14 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
           {rows.map((row) => {
             const value = draft[row.variantId]!;
             const before = original[row.variantId]!;
-            const isChanged = value.price !== before.price || value.bulkPrice !== before.bulkPrice;
+            const isChanged =
+              value.price !== before.price ||
+              value.bulkPrice !== before.bulkPrice ||
+              value.compareAtPrice !== before.compareAtPrice;
             const priceValid = MONEY_PATTERN.test(value.price);
+            const mrpTooLow = mrpBelowPrice(value);
+            const mrpInvalid =
+              mrpTooLow || (value.compareAtPrice !== '' && !MONEY_PATTERN.test(value.compareAtPrice));
 
             const delta =
               priceValid && MONEY_PATTERN.test(before.price)
@@ -261,6 +301,18 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
 
                 <span className="tabular text-muted-foreground hidden w-[110px] shrink-0 text-right sm:block">
                   {MONEY_PATTERN.test(before.price) ? formatINR(before.price) : '—'}
+                </span>
+
+                <span className="hidden w-[110px] shrink-0 md:block">
+                  <Input
+                    value={value.compareAtPrice}
+                    onChange={(e) => set(row.variantId, 'compareAtPrice', e.target.value)}
+                    inputMode="decimal"
+                    placeholder="—"
+                    aria-label={`MRP for ${row.productName}`}
+                    title={mrpTooLow ? 'MRP must be higher than the selling price' : undefined}
+                    className={cn('tabular h-8', mrpInvalid && 'border-[var(--critical-fg)]')}
+                  />
                 </span>
 
                 <span className="w-[120px] shrink-0">
