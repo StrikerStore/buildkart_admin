@@ -26,6 +26,8 @@ import {
   PAYMENT_INSTRUMENT_LABELS,
   PAYMENT_METHOD_LABELS,
   PAYMENT_TRANSACTION_STATUS_LABELS,
+  subtractMoney,
+  toPaise,
   type PaymentGateway,
   type PaymentInstrument,
   type PaymentMethod,
@@ -155,7 +157,14 @@ export function PaymentPanel({
     occurredAt: nowForInput(),
   });
 
-  const refundable = Math.max(0, Number(amountPaid) - Number(amountRefunded));
+  /*
+   * In paise, not floats. `Number(a) - Number(b)` on two money strings lands on
+   * values like 3.299999999999997, and this one is prefilled straight into the
+   * refund amount — `toFixed(2)` hid that but could still round a paisa off
+   * what is actually given back. `subtractMoney` clamps at zero, which is what
+   * the `Math.max` was for.
+   */
+  const refundable = subtractMoney(amountPaid, amountRefunded);
 
   function open(type: PaymentTransactionType) {
     const initialGateway = gateway ?? gatewaysForMethod(paymentMethod)[0]!;
@@ -166,7 +175,7 @@ export function PaymentPanel({
       instrument: defaultInstrumentFor(initialGateway) ?? '',
       // Prefilled with what is actually owed, or what can still be given back —
       // the figure being typed is nearly always that one.
-      amount: type === 'PAYMENT' ? outstanding : refundable.toFixed(2),
+      amount: type === 'PAYMENT' ? outstanding : refundable,
       reference: '',
       gatewayOrderId: '',
       failureReason: '',
@@ -340,7 +349,7 @@ export function PaymentPanel({
           <PlusIcon className="size-4" />
           Record payment
         </Button>
-        {refundable > 0 && (
+        {toPaise(refundable) > 0 && (
           <Button type="button" size="sm" variant="ghost" onClick={() => open('REFUND')}>
             <UndoIcon className="size-4" />
             Record refund
@@ -365,7 +374,7 @@ export function PaymentPanel({
             </DialogTitle>
             <DialogDescription>
               {dialogType === 'REFUND'
-                ? `Up to ${formatINR(refundable.toFixed(2))} can be refunded on this order.`
+                ? `Up to ${formatINR(refundable)} can be refunded on this order.`
                 : 'What arrived, when, and under which reference. The payment status is worked out from this.'}
             </DialogDescription>
           </DialogHeader>
