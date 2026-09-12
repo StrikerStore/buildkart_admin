@@ -8,6 +8,7 @@ import {
   normalizeMoney,
   toPaise,
   fromPaise,
+  type BulkTierBasis,
   type VariantDraft,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
@@ -30,11 +31,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { cn } from '@/lib/utils';
+import { PriceTierEditor } from './PriceTierEditor';
 
 type BulkField =
   | 'price'
   | 'compareAtPrice'
-  | 'bulkPrice'
   | 'costPerItem'
   | 'stockQty'
   | 'lowStockThreshold'
@@ -44,7 +45,6 @@ type BulkField =
 const BULK_ACTIONS: Array<{ field: BulkField; label: string; money: boolean }> = [
   { field: 'price', label: 'Set price', money: true },
   { field: 'compareAtPrice', label: 'Set MRP', money: true },
-  { field: 'bulkPrice', label: 'Set bulk price', money: true },
   { field: 'costPerItem', label: 'Set cost', money: true },
   { field: 'stockQty', label: 'Set stock', money: false },
   { field: 'lowStockThreshold', label: 'Set low-stock alert', money: false },
@@ -81,15 +81,20 @@ const UNIT_SUGGESTIONS = [
 export function VariantMatrixEditor({
   variants,
   axisNames,
+  bulkTierBasis,
   onChange,
 }: {
   variants: VariantDraft[];
   axisNames: string[];
+  /** From the product — the ladders in this table all read the same way. */
+  bulkTierBasis: BulkTierBasis;
   onChange: (next: VariantDraft[]) => void;
 }) {
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<{ field: BulkField; money: boolean } | null>(null);
   const [adjust, setAdjust] = useState(false);
+  /** The row whose ladder is open, by matrix key. */
+  const [tierRow, setTierRow] = useState<string | null>(null);
 
   const selected = useMemo(
     () => variants.filter((v) => checked.has(v.matrixKey)),
@@ -158,7 +163,9 @@ export function VariantMatrixEditor({
                       applyToSelected(() => ({
                         price: source.price,
                         compareAtPrice: source.compareAtPrice,
-                        bulkPrice: source.bulkPrice,
+                        // Copied, not shared: one array across rows would make
+                        // editing a rung on one size edit it on all of them.
+                        tiers: source.tiers.map((tier) => ({ ...tier, id: undefined })),
                         costPerItem: source.costPerItem,
                         unitLabelEn: source.unitLabelEn,
                         unitLabelHi: source.unitLabelHi,
@@ -221,7 +228,7 @@ export function VariantMatrixEditor({
                 <th className="w-[130px] px-2 py-2">SKU</th>
                 <th className="w-[110px] px-2 py-2">Price</th>
                 <th className="w-[110px] px-2 py-2">MRP</th>
-                <th className="w-[110px] px-2 py-2">Bulk</th>
+                <th className="hidden w-[120px] px-2 py-2 lg:table-cell">Bulk breaks</th>
                 <th className="w-[120px] px-2 py-2">Unit</th>
                 <th className="w-[90px] px-2 py-2">Stock</th>
                 <th className="w-[70px] px-2 py-2 text-center">Active</th>
@@ -269,7 +276,7 @@ export function VariantMatrixEditor({
                       />
                     </td>
 
-                    {(['price', 'compareAtPrice', 'bulkPrice'] as const).map((field) => (
+                    {(['price', 'compareAtPrice'] as const).map((field) => (
                       <td key={field} className="px-2 py-1.5">
                         <Input
                           value={variant[field]}
@@ -286,6 +293,27 @@ export function VariantMatrixEditor({
                         />
                       </td>
                     ))}
+
+                    {/*
+                      * A ladder is a list, and there is no column shape for one.
+                      * The cell summarises it and opens the editor — hidden on
+                      * narrow screens, where the row already has more than fits.
+                      */}
+                    <td className="hidden px-2 py-1.5 lg:table-cell">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="tabular h-8 w-full justify-start font-normal"
+                        onClick={() => setTierRow(variant.matrixKey)}
+                      >
+                        {variant.tiers.length === 0
+                          ? '—'
+                          : variant.tiers
+                              .map((tier) => `${tier.threshold || '?'}+`)
+                              .join(' · ')}
+                      </Button>
+                    </td>
 
                     <td className="px-2 py-1.5">
                       <Input
@@ -535,6 +563,56 @@ function AdjustPricesDialog({
             }}
           >
             Apply
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * One row's bulk ladder, in a dialog.
+ *
+ * The matrix is a grid of scalar cells and a ladder is a list, so it cannot be
+ * a column. A dialog keeps the table readable and still puts the rungs one tap
+ * away from the row they belong to.
+ */
+function TierDialog({
+  open,
+  onOpenChange,
+  basis,
+  variant,
+  axisNames,
+  onChange,
+}: {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+  basis: BulkTierBasis;
+  variant: VariantDraft | null;
+  axisNames: string[];
+  onChange: (tiers: VariantDraft['tiers']) => void;
+}) {
+  if (!variant) return null;
+
+  const label = variant.optionValues.join(' / ') || axisNames.join(' / ') || 'this variant';
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>Bulk price breaks — {label}</DialogTitle>
+        </DialogHeader>
+
+        <PriceTierEditor
+          basis={basis}
+          listPrice={variant.price}
+          tiers={variant.tiers}
+          onTiersChange={onChange}
+        />
+
+        <DialogFooter>
+          <Button type="button" onClick={() => onOpenChange(false)}>
+            Done
           </Button>
         </DialogFooter>
       </DialogContent>

@@ -54,6 +54,7 @@ export const NAV_ITEMS: NavItem[] = [
     children: [
       { label: 'All products', href: '/products' },
       { label: "Today's Rates", href: '/rates' },
+      { label: 'Bulk rates', href: '/bulk-pricing' },
       { label: 'Inventory', href: '/inventory' },
       { label: 'Categories', href: '/categories' },
       { label: 'Tags', href: '/tags' },

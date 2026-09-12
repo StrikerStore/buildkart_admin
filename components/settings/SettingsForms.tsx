@@ -130,7 +130,6 @@ export function CommerceSettingsForm({
   initial,
 }: {
   initial: {
-    bulkUnlockCutoff: string;
     orderMinimumValue: string;
     promiseHours: number;
     cutoffTime: string;
@@ -164,20 +163,12 @@ export function CommerceSettingsForm({
   return (
     <div className="flex flex-col gap-4">
       <div className="grid gap-3 sm:grid-cols-2">
-        <Field
-          label="Bulk prices unlock at"
-          htmlFor="cutoff"
-          error={errors.bulkUnlockCutoff}
-          hint={`Carts at or above ${formatINR(form.bulkUnlockCutoff || '0')} get every line's bulk rate.`}
-        >
-          <Input
-            id="cutoff"
-            value={form.bulkUnlockCutoff}
-            onChange={(e) => setForm((c) => ({ ...c, bulkUnlockCutoff: e.target.value }))}
-            inputMode="decimal"
-            className="tabular"
-          />
-        </Field>
+        {/*
+          * The store-wide "bulk prices unlock at" field used to sit here. Bulk
+          * pricing is now a ladder on each product, set on the product itself
+          * and retuned on the Bulk rates screen, so there is nothing store-wide
+          * left to configure.
+          */}
         <Field
           label="Minimum order"
           htmlFor="minimum"

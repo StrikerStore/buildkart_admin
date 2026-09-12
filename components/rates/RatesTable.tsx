@@ -26,7 +26,6 @@ export type RateRow = {
   sku: string | null;
   unitLabel: string | null;
   price: string;
-  bulkPrice: string;
   /** The MRP, struck through on the storefront. Empty when there is none. */
   compareAtPrice: string;
   /** ISO date of the last price change, or null if never. */
@@ -67,14 +66,13 @@ function isToday(iso: string | null): boolean {
 export function RatesTable({ rows }: { rows: RateRow[] }) {
   const router = useRouter();
   const [draft, setDraft] = useState<
-    Record<string, { price: string; bulkPrice: string; compareAtPrice: string }>
+    Record<string, { price: string; compareAtPrice: string }>
   >(() =>
     Object.fromEntries(
       rows.map((r) => [
         r.variantId,
         {
           price: r.price,
-          bulkPrice: r.bulkPrice,
           /*
            * `?? ''` because the API may not send this yet. Admin and the API
            * deploy separately, and an undefined here would hand React an
@@ -104,7 +102,6 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
         if (!value) return false;
         return (
           value.price !== row.price ||
-          value.bulkPrice !== row.bulkPrice ||
           value.compareAtPrice !== (row.compareAtPrice ?? '')
         );
       }),
@@ -114,7 +111,6 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
   const invalid = changed.filter((row) => {
     const value = draft[row.variantId]!;
     if (!MONEY_PATTERN.test(value.price)) return true;
-    if (value.bulkPrice !== '' && !MONEY_PATTERN.test(value.bulkPrice)) return true;
     if (value.compareAtPrice !== '' && !MONEY_PATTERN.test(value.compareAtPrice)) return true;
     // Caught here as well as on the server, because the server rejects the
     // whole save and the owner would lose a screen of typing to one bad row.
@@ -124,7 +120,7 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
 
   function set(
     variantId: string,
-    field: 'price' | 'bulkPrice' | 'compareAtPrice',
+    field: 'price' | 'compareAtPrice',
     value: string,
   ) {
     setDraft((current) => ({
@@ -171,7 +167,6 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
         changes: changed.map((row) => ({
           variantId: row.variantId,
           price: normalizeMoney(draft[row.variantId]!.price),
-          bulkPrice: draft[row.variantId]!.bulkPrice,
           compareAtPrice: draft[row.variantId]!.compareAtPrice,
         })),
       });
@@ -262,7 +257,6 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
           <span className="hidden w-[110px] shrink-0 text-right sm:block">Current</span>
           <span className="hidden w-[110px] shrink-0 md:block">MRP</span>
           <span className="w-[120px] shrink-0">Selling price</span>
-          <span className="hidden w-[120px] shrink-0 md:block">Bulk price</span>
           <span className="hidden w-[90px] shrink-0 text-right lg:block">Updated</span>
         </div>
 
@@ -272,7 +266,6 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
             const before = original[row.variantId]!;
             const isChanged =
               value.price !== before.price ||
-              value.bulkPrice !== before.bulkPrice ||
               value.compareAtPrice !== (before.compareAtPrice ?? '');
             const priceValid = MONEY_PATTERN.test(value.price);
             const mrpTooLow = mrpBelowPrice(value);
@@ -336,17 +329,6 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
                       'tabular h-8',
                       !priceValid && value.price !== '' && 'border-[var(--critical-fg)]',
                     )}
-                  />
-                </span>
-
-                <span className="hidden w-[120px] shrink-0 md:block">
-                  <Input
-                    value={value.bulkPrice}
-                    onChange={(e) => set(row.variantId, 'bulkPrice', e.target.value)}
-                    inputMode="decimal"
-                    placeholder="—"
-                    aria-label={`Bulk price for ${row.productName}`}
-                    className="tabular h-8"
                   />
                 </span>
 

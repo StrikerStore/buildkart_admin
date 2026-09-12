@@ -16,6 +16,7 @@ import {
   canFulfil,
   defaultInstrumentFor,
   formatINR,
+  fromTierDtos,
   gatewaysForMethod,
   priceOrder,
   referenceLabelFor,
@@ -83,7 +84,7 @@ function Field({
   );
 }
 
-export function NewOrderForm({ bulkCutoff }: { bulkCutoff: string }) {
+export function NewOrderForm() {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -200,7 +201,7 @@ export function NewOrderForm({ bulkCutoff }: { bulkCutoff: string }) {
         lines.map((line) => ({
           variantId: line.variant.variantId,
           price: line.variant.price,
-          bulkPrice: line.variant.bulkPrice,
+          tiers: fromTierDtos(line.variant.tiers),
           // Carried through from the variant search. Without these the preview
           // would silently disagree with the server for any exclusive-priced
           // product — the exact divergence sharing `priceOrder` prevents.
@@ -209,8 +210,7 @@ export function NewOrderForm({ bulkCutoff }: { bulkCutoff: string }) {
           taxable: line.variant.taxable,
         })),
         {
-          bulkCutoff,
-          deliveryCharge: deliveryCharge.trim() === '' ? '0.00' : deliveryCharge.trim(),
+            deliveryCharge: deliveryCharge.trim() === '' ? '0.00' : deliveryCharge.trim(),
           discountTotal: discountTotal.trim() === '' ? undefined : discountTotal.trim(),
           freeDeliveryAbove: freeAbove,
         },
@@ -220,7 +220,7 @@ export function NewOrderForm({ bulkCutoff }: { bulkCutoff: string }) {
       // simply waits until the numbers make sense again.
       return null;
     }
-  }, [lines, deliveryCharge, discountTotal, bulkCutoff, freeAbove]);
+  }, [lines, deliveryCharge, discountTotal, freeAbove]);
 
   function addLine(variant: VariantSearchResult) {
     setLines((current) => {
@@ -408,9 +408,11 @@ export function NewOrderForm({ bulkCutoff }: { bulkCutoff: string }) {
 
                     <span className="tabular w-[92px] shrink-0 text-right font-medium">
                       {priced ? formatINR(priced.lineTotal) : '—'}
-                      {priced?.wasBulkPrice && (
+                      {priced?.appliedTier && (
                         <span className="text-muted-foreground block text-[11px] font-normal">
-                          bulk rate
+                          {priced.appliedTier.minQuantity !== null
+                            ? `${priced.appliedTier.minQuantity}+ rate`
+                            : `over ${formatINR(priced.appliedTier.minAmount!)}`}
                         </span>
                       )}
                       {priced?.wasOverridden && (
@@ -592,9 +594,16 @@ export function NewOrderForm({ bulkCutoff }: { bulkCutoff: string }) {
               <span className="text-muted-foreground">Subtotal</span>
               <span className="tabular">{preview ? formatINR(preview.subtotal) : '—'}</span>
             </div>
+            {/*
+              * No cart-wide banner any more. Bulk is decided per line, so "the
+              * cart is over X" is not a fact that exists — the per-line marker
+              * above is the only place that information now lives, which is why
+              * it names the rung rather than just saying "bulk".
+              */}
             {preview?.bulkPricingApplied && (
               <p className="text-xs text-[var(--success-fg)]">
-                Bulk rates applied — the cart is over {formatINR(bulkCutoff)}.
+                Bulk rates applied on {preview.lines.filter((l) => l.wasBulkPrice).length} line
+                {preview.lines.filter((l) => l.wasBulkPrice).length === 1 ? '' : 's'}.
               </p>
             )}
 

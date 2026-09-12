@@ -26,7 +26,7 @@ export default async function NewOrderPage() {
         backLabel="Orders"
         subtitle="For an order taken over the phone or at the counter."
       />
-      <NewOrderForm bulkCutoff={commerce.bulkUnlockCutoff} />
+      <NewOrderForm />
     </PageContainer>
   );
 }

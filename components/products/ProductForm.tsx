@@ -16,6 +16,7 @@ import {
   describeProblem,
   emptyVariantDraft,
   matchesTagRules,
+  type BulkTierBasis,
   type OptionAxisDraft,
   type RuleCategoryDto,
   type VariantDraft,
@@ -75,6 +76,7 @@ export type ProductFormInitial = {
   taxInclusive: boolean;
   hsnCode: string;
   isRateVolatile: boolean;
+  bulkTierBasis: BulkTierBasis;
   searchKeywords: string;
   seoTitle: string;
   seoDescriptionEn: string;
@@ -93,7 +95,6 @@ export function ProductForm({
   tagSuggestions,
   ruleCategories,
   mediaCtx,
-  bulkCutoff,
   taxRates,
   defaultTaxRateId,
 }: {
@@ -104,7 +105,6 @@ export function ProductForm({
   tagSuggestions: string[];
   ruleCategories: RuleCategoryDto[];
   mediaCtx: MediaUrlContext;
-  bulkCutoff: string;
   taxRates: TaxRateDto[];
   defaultTaxRateId: string | null;
 }) {
@@ -174,6 +174,7 @@ export function ProductForm({
     hsnCode: initial.hsnCode,
   }));
   const [isRateVolatile, setIsRateVolatile] = useState(initial.isRateVolatile);
+  const [bulkTierBasis, setBulkTierBasis] = useState(initial.bulkTierBasis);
   const [searchKeywords, setSearchKeywords] = useState(initial.searchKeywords);
   const [seoTitle, setSeoTitle] = useState(initial.seoTitle);
   const [seoDescription, setSeoDescription] = useState(initial.seoDescriptionEn);
@@ -257,6 +258,16 @@ export function ProductForm({
     toast.success(`${Object.keys(generated).length} SKU${Object.keys(generated).length === 1 ? '' : 's'} generated`);
   }
 
+  /**
+   * Switching the basis rewrites what every threshold means — 20 bags and ₹20
+   * are the same digits — so the ladders are cleared rather than silently
+   * carried across as numbers that now say something else.
+   */
+  function changeBasis(next: typeof bulkTierBasis) {
+    setBulkTierBasis(next);
+    setVariants((current) => current.map((v) => (v.tiers.length > 0 ? { ...v, tiers: [] } : v)));
+  }
+
   function onSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setFormError(null);
@@ -307,6 +318,7 @@ export function ProductForm({
       taxInclusive: tax.taxInclusive,
       hsnCode: tax.hsnCode,
       isRateVolatile,
+      bulkTierBasis,
       searchKeywords,
       seoTitle,
       seoDescriptionEn: seoDescription,
@@ -321,7 +333,7 @@ export function ProductForm({
         sku: v.sku.trim() === '' ? (autoSkus[v.matrixKey] ?? '') : v.sku,
         price: v.price,
         compareAtPrice: v.compareAtPrice,
-        bulkPrice: v.bulkPrice,
+        tiers: v.tiers,
         costPerItem: v.costPerItem,
         unitLabelEn: v.unitLabelEn,
         unitLabelHi: v.unitLabelHi,
@@ -601,9 +613,35 @@ export function ProductForm({
                           Generate SKUs
                         </Button>
                       </div>
+                      {/*
+                        * The basis lives here for a multi-variant product,
+                        * because the matrix's per-row ladders all read the same
+                        * way and the choice belongs to the product, not a row.
+                        */}
+                      <div className="flex flex-col gap-1.5">
+                        <Label htmlFor="matrixBasis">Bulk pricing works by</Label>
+                        <Select
+                          value={bulkTierBasis}
+                          onValueChange={(next) => changeBasis(next as BulkTierBasis)}
+                        >
+                          <SelectTrigger id="matrixBasis" className="sm:w-[280px]">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="QUANTITY">
+                              Quantity on the line — 20 bags or more
+                            </SelectItem>
+                            <SelectItem value="AMOUNT">
+                              Value of the line — ₹10,000 or more
+                            </SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+
                       <VariantMatrixEditor
                         variants={variants}
                         axisNames={axisNames}
+                        bulkTierBasis={bulkTierBasis}
                         onChange={setVariants}
                       />
                     </>
@@ -635,8 +673,9 @@ export function ProductForm({
             */}
             {!hasVariants && (
               <PricingSection
+                bulkTierBasis={bulkTierBasis}
+                onBasisChange={changeBasis}
                 variant={single}
-                bulkCutoff={bulkCutoff}
                 fieldErrors={fieldErrors}
                 onChange={updateSingleVariant}
               />
@@ -656,7 +695,6 @@ export function ProductForm({
             {!hasVariants && (
               <InventorySection
                 variant={single}
-                bulkCutoff={bulkCutoff}
                 fieldErrors={fieldErrors}
                 onChange={updateSingleVariant}
               />

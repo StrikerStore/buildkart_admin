@@ -1,6 +1,13 @@
 'use client';
 
-import { MONEY_PATTERN, formatINR, discountPercent, type VariantDraft } from '@StrikerStore/contract';
+import {
+  MONEY_PATTERN,
+  discountPercent,
+  formatINR,
+  type BulkTierBasis,
+  type VariantDraft,
+} from '@StrikerStore/contract';
+import { PriceTierEditor } from './PriceTierEditor';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -57,12 +64,17 @@ function MoneyInput({
   );
 }
 
-/** What both halves of the single-variant editor take. */
+/** What the single-variant editors share. */
 type SingleVariantProps = {
   variant: VariantDraft;
   onChange: (changes: Partial<VariantDraft>) => void;
-  bulkCutoff: string;
   fieldErrors: Record<string, string>;
+};
+
+/** Pricing also owns the bulk ladder, whose basis belongs to the product. */
+type PricingProps = SingleVariantProps & {
+  bulkTierBasis: BulkTierBasis;
+  onBasisChange: (next: BulkTierBasis) => void;
 };
 
 /**
@@ -78,9 +90,10 @@ type SingleVariantProps = {
 export function PricingSection({
   variant,
   onChange,
-  bulkCutoff,
+  bulkTierBasis,
+  onBasisChange,
   fieldErrors,
-}: SingleVariantProps) {
+}: PricingProps) {
   const validPrice = MONEY_PATTERN.test(variant.price);
   const validCost = MONEY_PATTERN.test(variant.costPerItem);
 
@@ -117,13 +130,6 @@ export function PricingSection({
 
         <div className="grid gap-4 sm:grid-cols-2">
           <MoneyInput
-            id="bulkPrice"
-            label="Bulk price"
-            value={variant.bulkPrice}
-            onChange={(v) => onChange({ bulkPrice: v })}
-            help={`Applies once the cart passes ${formatINR(bulkCutoff)}`}
-          />
-          <MoneyInput
             id="cost"
             label="Cost per item"
             value={variant.costPerItem}
@@ -133,6 +139,39 @@ export function PricingSection({
                 ? `Margin ${margin}%. Never shown to customers.`
                 : 'Never shown to customers.'
             }
+          />
+        </div>
+
+        {/*
+          * The bulk ladder, and how its thresholds are read.
+          *
+          * The basis sits above the rungs because changing it reinterprets
+          * every one of them — 20 bags and ₹20 are the same digits — so the
+          * ladder clears when it changes rather than silently keeping numbers
+          * that now mean something else.
+          */}
+        <div className="flex flex-col gap-3 border-t pt-4">
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="bulkBasis">Bulk pricing works by</Label>
+            <Select
+              value={bulkTierBasis}
+              onValueChange={(next) => onBasisChange(next as BulkTierBasis)}
+            >
+              <SelectTrigger id="bulkBasis" className="sm:w-[280px]">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="QUANTITY">Quantity on the line — 20 bags or more</SelectItem>
+                <SelectItem value="AMOUNT">Value of the line — ₹10,000 or more</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <PriceTierEditor
+            basis={bulkTierBasis}
+            listPrice={variant.price}
+            tiers={variant.tiers}
+            onTiersChange={(tiers) => onChange({ tiers })}
           />
         </div>
 
