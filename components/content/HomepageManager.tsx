@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
@@ -232,6 +233,8 @@ export function HomepageManager({
       }
       case 'NEW_ARRIVALS':
         return `Listed in the last ${row.days} day${row.days === 1 ? '' : 's'}, up to ${row.limit}`;
+      case 'CUSTOMER_REVIEWS':
+        return `Up to ${row.limit} review${row.limit === 1 ? '' : 's'} from Customer reviews`;
       case 'TRUST_STRIP':
         return row.markers.map((marker) => TRUST_MARKER_LABELS[marker]).join(' · ');
       default:
@@ -489,9 +492,21 @@ export function HomepageManager({
             </div>
           )}
 
+          {form.type === 'CUSTOMER_REVIEWS' && (
+            <p className="text-muted-foreground text-xs">
+              Reviews are written and arranged under{' '}
+              <Link href="/reviews" className="text-foreground underline underline-offset-2">
+                Website › Customer reviews
+              </Link>
+              . This section shows the first ones in that order and hides itself while none are
+              showing.
+            </p>
+          )}
+
           {(form.type === 'TAG_CAROUSEL' ||
             form.type === 'NEW_ARRIVALS' ||
-            form.type === 'RATE_TICKER') && (
+            form.type === 'RATE_TICKER' ||
+            form.type === 'CUSTOMER_REVIEWS') && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="s-limit">Show at most</Label>
               <Input

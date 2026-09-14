@@ -75,8 +75,13 @@ export function useDirectUpload({
   prefix = 'products',
   onUploaded,
 }: {
-  prefix?: 'products' | 'categories' | 'banners';
-  onUploaded?: (mediaIds: string[]) => void;
+  prefix?: 'products' | 'categories' | 'banners' | 'reviews';
+  /**
+   * The files come back beside their ids so a caller can preview an upload
+   * from the local bytes — a video especially, which has no resized thumbnail
+   * to fetch — without a round trip to find out what it just sent.
+   */
+  onUploaded?: (mediaIds: string[], uploads: Array<{ mediaId: string; file: File }>) => void;
 } = {}) {
   const [items, setItems] = useState<UploadItem[]>([]);
   const [isUploading, setIsUploading] = useState(false);
@@ -102,6 +107,7 @@ export function useDirectUpload({
       setIsUploading(true);
 
       const succeeded: string[] = [];
+      const uploaded: Array<{ mediaId: string; file: File }> = [];
 
       // Sequential on purpose: parallel uploads on a weak connection make every
       // bar crawl at once, which reads as a hang. One at a time finishes sooner
@@ -148,6 +154,7 @@ export function useDirectUpload({
 
           patch(item.localId, { status: 'done', mediaId });
           succeeded.push(mediaId);
+          uploaded.push({ mediaId, file: item.file });
         } catch (error) {
           patch(item.localId, {
             status: 'error',
@@ -157,7 +164,7 @@ export function useDirectUpload({
       }
 
       setIsUploading(false);
-      if (succeeded.length > 0) onUploaded?.(succeeded);
+      if (succeeded.length > 0) onUploaded?.(succeeded, uploaded);
     },
     [patch, prefix, onUploaded],
   );
@@ -166,5 +173,12 @@ export function useDirectUpload({
     setItems((current) => current.filter((item) => item.status !== 'done'));
   }, []);
 
-  return { items, isUploading, upload, clearFinished };
+  /** Drops finished and failed rows alike, for a form opened afresh. In-flight rows stay. */
+  const clearSettled = useCallback(() => {
+    setItems((current) =>
+      current.filter((item) => item.status !== 'done' && item.status !== 'error'),
+    );
+  }, []);
+
+  return { items, isUploading, upload, clearFinished, clearSettled };
 }

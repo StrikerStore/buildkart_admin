@@ -100,6 +100,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Homepage sections', href: '/homepage' },
       { label: 'Announcement bar', href: '/announcements' },
       { label: 'Banners', href: '/banners' },
+      { label: 'Customer reviews', href: '/reviews' },
       { label: 'Pages', href: '/pages' },
       { label: 'Menus', href: '/menus' },
       { label: 'Blog', href: '/blog' },

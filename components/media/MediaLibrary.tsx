@@ -8,6 +8,7 @@ import {
   Trash2Icon,
   AlertCircleIcon,
   ImageIcon,
+  FilmIcon,
   CheckIcon,
   LinkIcon,
   SearchIcon,
@@ -421,7 +422,12 @@ export function MediaLibrary({
                     className="bg-muted flex size-10 shrink-0 items-center justify-center overflow-hidden rounded border"
                     aria-label={`Open ${item.filename}`}
                   >
-                    {src ? (
+                    {item.mimeType.startsWith('video/') ? (
+                      // A review video: no resized thumbnail exists, and loading
+                      // every clip in a fifty-row table to paint a 40px square
+                      // would cost far more than the icon is worth.
+                      <FilmIcon className="text-muted-foreground size-4" strokeWidth={1.5} />
+                    ) : src ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={src}
@@ -512,7 +518,14 @@ export function MediaLibrary({
 
       <MediaDetailDialog
         media={selected}
-        previewSrc={selected ? thumb(selected, ADMIN_PREVIEW) : null}
+        previewSrc={
+          selected
+            ? // The resizing path is for images; a video previews from the object itself.
+              selected.mimeType.startsWith('video/')
+              ? publicUrl(selected)
+              : thumb(selected, ADMIN_PREVIEW)
+            : null
+        }
         publicUrl={selected ? publicUrl(selected) : null}
         onClose={() => setSelected(null)}
         onChanged={() => router.refresh()}
@@ -606,7 +619,9 @@ function MediaDetailDialog({
         )}
 
         <div className="bg-muted flex max-h-[280px] items-center justify-center overflow-hidden rounded-md border">
-          {previewSrc ? (
+          {previewSrc && media.mimeType.startsWith('video/') ? (
+            <video src={previewSrc} controls playsInline className="max-h-[280px]" />
+          ) : previewSrc ? (
             // eslint-disable-next-line @next/next/no-img-element
             <img
               src={previewSrc}
