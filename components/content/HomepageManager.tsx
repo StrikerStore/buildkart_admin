@@ -62,6 +62,7 @@ const EMPTY = {
   productIds: [] as string[],
   tagSlug: '',
   limit: '12',
+  days: '15',
   markers: [...TRUST_MARKERS] as TrustMarker[],
   isActive: true,
 };
@@ -141,6 +142,7 @@ export function HomepageManager({
       productIds: row.productIds,
       tagSlug: row.tagSlug ?? '',
       limit: String(row.limit),
+      days: String(row.days),
       markers: row.markers,
       isActive: row.isActive,
     });
@@ -185,6 +187,7 @@ export function HomepageManager({
           productIds: form.productIds,
           tagSlug: form.tagSlug === '' ? undefined : form.tagSlug,
           limit: form.limit,
+          days: form.days,
           markers: form.markers,
         },
       });
@@ -227,6 +230,8 @@ export function HomepageManager({
         const tag = tags.find((t) => t.slug === row.tagSlug);
         return tag ? `Tagged "${tag.label}", up to ${row.limit}` : 'Tag missing';
       }
+      case 'NEW_ARRIVALS':
+        return `Listed in the last ${row.days} day${row.days === 1 ? '' : 's'}, up to ${row.limit}`;
       case 'TRUST_STRIP':
         return row.markers.map((marker) => TRUST_MARKER_LABELS[marker]).join(' · ');
       default:
@@ -462,7 +467,31 @@ export function HomepageManager({
             </div>
           )}
 
-          {(form.type === 'TAG_CAROUSEL' || form.type === 'RATE_TICKER') && (
+          {form.type === 'NEW_ARRIVALS' && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="s-days">Keep a product here for</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="s-days"
+                  value={form.days}
+                  onChange={(e) =>
+                    setForm((c) => ({ ...c, days: e.target.value.replace(/\D/g, '') }))
+                  }
+                  inputMode="numeric"
+                  className="tabular w-[100px]"
+                />
+                <span className="text-muted-foreground">days after it goes live</span>
+              </div>
+              <span className="text-muted-foreground text-xs">
+                Newest first. A product leaves this section on its own once it has been live longer
+                than this — up to 90 days. The section hides itself when nothing is new.
+              </span>
+            </div>
+          )}
+
+          {(form.type === 'TAG_CAROUSEL' ||
+            form.type === 'NEW_ARRIVALS' ||
+            form.type === 'RATE_TICKER') && (
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="s-limit">Show at most</Label>
               <Input
