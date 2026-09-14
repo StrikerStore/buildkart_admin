@@ -60,7 +60,7 @@ const EMPTY = {
   titleHi: '',
   categoryIds: [] as string[],
   productIds: [] as string[],
-  tagId: '',
+  tagSlug: '',
   limit: '12',
   markers: [...TRUST_MARKERS] as TrustMarker[],
   isActive: true,
@@ -109,7 +109,8 @@ export function HomepageManager({
   rows: HomepageSectionDto[];
   categories: Option[];
   products: Option[];
-  tags: Option[];
+  /** Public, active tags only, by slug — see `HomepageSectionOptionsDto`. */
+  tags: Array<{ slug: string; label: string }>;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -138,7 +139,7 @@ export function HomepageManager({
       titleHi: row.titleHi ?? '',
       categoryIds: row.categoryIds,
       productIds: row.productIds,
-      tagId: row.tagId ?? '',
+      tagSlug: row.tagSlug ?? '',
       limit: String(row.limit),
       markers: row.markers,
       isActive: row.isActive,
@@ -182,7 +183,7 @@ export function HomepageManager({
         config: {
           categoryIds: form.categoryIds,
           productIds: form.productIds,
-          tagId: form.tagId === '' ? undefined : form.tagId,
+          tagSlug: form.tagSlug === '' ? undefined : form.tagSlug,
           limit: form.limit,
           markers: form.markers,
         },
@@ -223,7 +224,7 @@ export function HomepageManager({
       case 'PRODUCT_CAROUSEL':
         return `${row.productIds.length} product${row.productIds.length === 1 ? '' : 's'}`;
       case 'TAG_CAROUSEL': {
-        const tag = tags.find((t) => t.id === row.tagId);
+        const tag = tags.find((t) => t.slug === row.tagSlug);
         return tag ? `Tagged "${tag.label}", up to ${row.limit}` : 'Tag missing';
       }
       case 'TRUST_STRIP':
@@ -411,15 +412,15 @@ export function HomepageManager({
             <div className="flex flex-col gap-1.5">
               <Label>Tag</Label>
               <Select
-                value={form.tagId}
-                onValueChange={(value) => setForm((c) => ({ ...c, tagId: value }))}
+                value={form.tagSlug}
+                onValueChange={(value) => setForm((c) => ({ ...c, tagSlug: value }))}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose a tag" />
                 </SelectTrigger>
                 <SelectContent>
                   {tags.map((tag) => (
-                    <SelectItem key={tag.id} value={tag.id}>
+                    <SelectItem key={tag.slug} value={tag.slug}>
                       {tag.label}
                     </SelectItem>
                   ))}
@@ -427,6 +428,7 @@ export function HomepageManager({
               </Select>
               <span className="text-muted-foreground text-xs">
                 The section fills itself from the tag, so it stays current without being edited.
+                Only public tags are listed — internal ones never appear on the storefront.
               </span>
             </div>
           )}
