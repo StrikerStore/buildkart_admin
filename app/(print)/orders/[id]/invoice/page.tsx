@@ -88,6 +88,15 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
 
         <header className="flex flex-wrap items-start justify-between gap-4 border-b pb-4">
           <div className="flex flex-col gap-0.5">
+            {/* Decorative: the legal name below is what the invoice must carry. */}
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/brand/logo.png"
+              alt=""
+              width={321}
+              height={96}
+              className="mb-2 h-10 w-auto self-start"
+            />
             <h1 className="text-xl font-bold">{store.nameEn || 'BuildKart'}</h1>
             {store.addressLines.map((line, index) => (
               <span key={index} className="text-neutral-600">

@@ -30,6 +30,14 @@ export const metadata: Metadata = {
   },
   description: 'Manage the BuildKart catalog, orders, delivery areas and rates.',
   robots: { index: false, follow: false },
+  // From BuildKart_Professional_Logo_Pack, in `public/`.
+  icons: {
+    icon: [
+      { url: '/favicon.ico', sizes: 'any' },
+      { url: '/favicon-32.png', type: 'image/png', sizes: '32x32' },
+    ],
+    apple: [{ url: '/apple-touch-icon.png', sizes: '180x180' }],
+  },
 };
 
 export const viewport: Viewport = {
