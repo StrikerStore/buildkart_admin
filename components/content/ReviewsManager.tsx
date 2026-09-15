@@ -24,7 +24,6 @@ import {
   ADMIN_THUMB_2X,
   buildMediaUrl,
   formatStoreDate,
-  REVIEW_BODY_LIMIT,
   REVIEW_MEDIA_LIMIT,
   REVIEW_VIDEO_MAX_BYTES,
   REVIEW_VIDEO_MIME,
@@ -34,7 +33,6 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
-import { Textarea } from '@/components/ui/textarea';
 import {
   Dialog,
   DialogContent,
@@ -76,7 +74,6 @@ const EMPTY = {
   customerPhone: '',
   /** 0 until chosen, so an untouched form cannot quietly post five stars. */
   rating: 0,
-  body: '',
   isActive: true,
 };
 
@@ -231,7 +228,6 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
       customerName: row.customerName,
       customerPhone: row.customerPhone ?? '',
       rating: row.rating,
-      body: row.body,
       isActive: row.isActive,
     });
     setMedia(
@@ -356,8 +352,8 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
           <MessageSquareQuoteIcon className="text-muted-foreground size-8" strokeWidth={1.5} />
           <p className="font-medium">No reviews yet</p>
           <p className="text-muted-foreground max-w-[420px]">
-            Post what customers tell you — on WhatsApp, on a call, at the counter — with their
-            photos and videos of the delivery.
+            Post the photos and videos customers send of their delivery — on WhatsApp or at the
+            counter — with their star rating.
           </p>
           <Button type="button" className="mt-1" onClick={openNew}>
             <PlusIcon className="size-4" />
@@ -399,7 +395,7 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
 
                 {lead ? (
                   <MediaTile
-                    className="size-12 shrink-0"
+                    className="h-16 w-9 shrink-0"
                     item={{
                       id: lead.id,
                       kind: lead.kind,
@@ -408,7 +404,7 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
                     }}
                   />
                 ) : (
-                  <span className="bg-muted text-muted-foreground grid size-12 shrink-0 place-items-center rounded border font-semibold">
+                  <span className="bg-muted text-muted-foreground grid h-16 w-9 shrink-0 place-items-center rounded border font-semibold">
                     {row.customerName.trim().charAt(0).toUpperCase()}
                   </span>
                 )}
@@ -424,7 +420,6 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
                     )}
                     <StarRow rating={row.rating} />
                   </span>
-                  <span className="text-muted-foreground mt-0.5 line-clamp-2 block">{row.body}</span>
                   <span className="text-muted-foreground mt-0.5 block text-xs">
                     {mediaSummary(row)} · Posted {formatStoreDate(row.createdAt)}
                   </span>
@@ -469,8 +464,8 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
           <DialogHeader>
             <DialogTitle>{form.id ? 'Edit review' : 'Post a review'}</DialogTitle>
             <DialogDescription>
-              Shown on the home page in the Customer reviews section, in the order set on this
-              screen.
+              A photo or video card on the home page, with the stars, the customer&apos;s name and —
+              when you add their number — a Verified customer badge.
             </DialogDescription>
           </DialogHeader>
 
@@ -540,33 +535,18 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
               {error('rating')}
             </div>
 
-            <div className="flex flex-col gap-1.5 sm:col-span-2">
-              <div className="flex items-baseline justify-between gap-2">
-                <Label htmlFor="r-body">Review</Label>
-                <span className="text-muted-foreground tabular text-xs">
-                  {form.body.length} / {REVIEW_BODY_LIMIT}
-                </span>
-              </div>
-              <Textarea
-                id="r-body"
-                rows={5}
-                maxLength={REVIEW_BODY_LIMIT}
-                value={form.body}
-                onChange={(e) => setForm((c) => ({ ...c, body: e.target.value }))}
-                placeholder="Ordered 40 bags of cement in the morning and they were on site by afternoon."
-                aria-invalid={Boolean(errors.body)}
-              />
-              {error('body')}
-            </div>
-
             <div className="flex flex-col gap-2 sm:col-span-2">
               <Label>Photos and videos</Label>
+              <span className="text-muted-foreground -mt-1 text-xs">
+                The first one is the review&apos;s card on the home page, cropped to a tall 9:16
+                frame — a portrait photo or a phone video filmed upright fills it best.
+              </span>
 
               {media.length > 0 && (
                 <ul className="flex flex-wrap gap-2">
                   {media.map((item, index) => (
                     <li key={item.id} className="flex flex-col items-center gap-1">
-                      <MediaTile item={item} className="size-[84px]" />
+                      <MediaTile item={item} className="h-[128px] w-[72px]" />
                       <span className="flex items-center">
                         <button
                           type="button"
@@ -658,8 +638,8 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
                 </Button>
               </div>
               <span className="text-muted-foreground text-xs">
-                Up to {REVIEW_MEDIA_LIMIT}. Photos, or MP4, WebM and MOV videos up to {VIDEO_MB} MB.
-                They appear on the review in this order.
+                At least one, up to {REVIEW_MEDIA_LIMIT}. Photos, or MP4, WebM and MOV videos up to{' '}
+                {VIDEO_MB} MB. The rest open from the card in this order.
               </span>
               {error('mediaIds')}
             </div>
@@ -677,7 +657,11 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
             <Button type="button" variant="outline" onClick={close}>
               Cancel
             </Button>
-            <Button type="button" disabled={isSaving || isUploading} onClick={save}>
+            <Button
+              type="button"
+              disabled={isSaving || isUploading || media.length === 0}
+              onClick={save}
+            >
               {(isSaving || isUploading) && <LoaderCircleIcon className="size-4 animate-spin" />}
               {isUploading ? 'Uploading…' : form.id ? 'Save review' : 'Post review'}
             </Button>
