@@ -37,7 +37,7 @@ export function BuildKartMark({
     <img
       src={showText ? '/brand/logo.png' : '/brand/logo-mark.png'}
       alt="BuildKart"
-      width={showText ? 321 : 127}
+      width={showText ? 318 : 96}
       height={96}
       className={cn(HEIGHTS[size], 'w-auto')}
     />

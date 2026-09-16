@@ -93,7 +93,7 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             <img
               src="/brand/logo.png"
               alt=""
-              width={321}
+              width={318}
               height={96}
               className="mb-2 h-10 w-auto self-start"
             />
