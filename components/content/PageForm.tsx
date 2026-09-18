@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { CheckIcon, LoaderCircleIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
+  CONTACT_WHATSAPP_NUMBER,
   PAGE_KINDS,
   PAGE_KIND_LABELS,
   SEO_DESCRIPTION_LIMIT,
@@ -85,6 +86,7 @@ export function PageForm({ initial, ctx }: { initial: PageFormDto; ctx: MediaUrl
   }
 
   const slugPreview = form.slug || slugify(form.titleEn) || 'page-url';
+  const isContact = form.kind === 'CONTACT';
 
   return (
     <PageContainer>
@@ -178,32 +180,50 @@ export function PageForm({ initial, ctx }: { initial: PageFormDto; ctx: MediaUrl
             </div>
           </Card>
 
-          <Card title="Content">
-            <RichTextEditor
-              value={form.bodyHtmlEn}
-              onChange={(html) => set('bodyHtmlEn', html)}
-              ctx={ctx}
-              placeholder="Write the page…"
-            />
-          </Card>
+          {/*
+           * A contact page never renders, so the editors and the search listing
+           * are hidden rather than disabled — a box the owner can type into is a
+           * promise that what they type will be read by someone. Anything
+           * already written stays in `form` and is saved untouched, so switching
+           * the kind back brings it straight back.
+           */}
+          {isContact ? (
+            <Card title="Content">
+              <p className="text-muted-foreground text-sm">
+                Nothing to write. Opening this page sends the customer straight to WhatsApp — to the
+                WhatsApp number in Settings, or {CONTACT_WHATSAPP_NUMBER} until one is set there.
+              </p>
+            </Card>
+          ) : (
+            <>
+              <Card title="Content">
+                <RichTextEditor
+                  value={form.bodyHtmlEn}
+                  onChange={(html) => set('bodyHtmlEn', html)}
+                  ctx={ctx}
+                  placeholder="Write the page…"
+                />
+              </Card>
 
-          <Card title="Content (Hindi)" subtitle="Optional. Falls back to English when blank.">
-            <RichTextEditor
-              value={form.bodyHtmlHi}
-              onChange={(html) => set('bodyHtmlHi', html)}
-              ctx={ctx}
-              lang="hi"
-            />
-          </Card>
+              <Card title="Content (Hindi)" subtitle="Optional. Falls back to English when blank.">
+                <RichTextEditor
+                  value={form.bodyHtmlHi}
+                  onChange={(html) => set('bodyHtmlHi', html)}
+                  ctx={ctx}
+                  lang="hi"
+                />
+              </Card>
 
-          <SeoFields
-            title={form.seoTitle}
-            description={form.seoDescription}
-            fallbackTitle={form.titleEn}
-            path={`/pages/${slugPreview}`}
-            onTitle={(v) => set('seoTitle', v)}
-            onDescription={(v) => set('seoDescription', v)}
-          />
+              <SeoFields
+                title={form.seoTitle}
+                description={form.seoDescription}
+                fallbackTitle={form.titleEn}
+                path={`/pages/${slugPreview}`}
+                onTitle={(v) => set('seoTitle', v)}
+                onDescription={(v) => set('seoDescription', v)}
+              />
+            </>
+          )}
         </div>
 
         <div className="flex flex-col gap-4">
@@ -225,7 +245,10 @@ export function PageForm({ initial, ctx }: { initial: PageFormDto; ctx: MediaUrl
             </label>
           </Card>
 
-          <Card title="Kind" subtitle="Policies are grouped together in the footer.">
+          <Card
+            title="Kind"
+            subtitle="Policies are grouped together in the footer. A contact page has no content — it opens WhatsApp."
+          >
             <Select value={form.kind} onValueChange={(v) => set('kind', v as PageFormDto['kind'])}>
               <SelectTrigger>
                 <SelectValue />
