@@ -9,6 +9,15 @@ import { cn } from '@/lib/utils';
 
 export const metadata: Metadata = { title: 'Menus' };
 
+const MENU_HINTS: Record<MenuHandle, string> = {
+  header:
+    'The row across the top of the site on a computer. Sub-links drop down under their link on hover.',
+  footer:
+    'The block at the bottom of every page. A group becomes one titled column — "Policy" with the policies under it — and links left on their own share an untitled column beside them. Contact details are not here: they come from Settings.',
+  mobile:
+    'The side panel behind the ☰ button on a phone. Sub-links open under their link when it is tapped.',
+};
+
 /**
  * One screen, one menu at a time, chosen by a tab in the URL.
  *
@@ -58,6 +67,16 @@ export default async function MenusPage({
             </Link>
           ))}
         </div>
+
+        {/*
+          * What the shape of this menu turns into, said once per tab.
+          *
+          * The three menus are edited in the same builder but are not drawn the
+          * same way, and "Add a group" means nothing until you know the footer
+          * renders a group as a column. Stated here rather than in the builder
+          * so it does not repeat above every card.
+          */}
+        <p className="text-muted-foreground text-sm">{MENU_HINTS[handle]}</p>
 
         <MenuBuilder key={handle} menu={menu} targets={targets} />
       </div>

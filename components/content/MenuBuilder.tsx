@@ -54,6 +54,22 @@ const blank = (): Draft => ({
 });
 
 /**
+ * A new group starts as a title with one empty link under it.
+ *
+ * Starting it empty would leave a title heading nothing, which is the one shape
+ * the footer cannot draw — and the owner would have to find "Add a sub-link"
+ * before the row meant anything.
+ */
+const blankGroup = (): TopDraft => ({
+  ...blank(),
+  targetKind: 'HEADING',
+  children: [blank()],
+});
+
+/** The kinds a sub-link may take: everything but a group title. */
+const CHILD_TARGET_KINDS = MENU_TARGET_KINDS.filter((kind) => kind !== 'HEADING');
+
+/**
  * The menu builder.
  *
  * The whole menu saves at once rather than row by row: reordering, re-nesting
@@ -63,6 +79,13 @@ const blank = (): Draft => ({
  * Ordering is by up/down buttons rather than drag. A nested list has two axes —
  * position and depth — and a drag that can change both at once is hard to aim
  * on a phone, which is where this shop is run from.
+ *
+ * Two shapes live in the same list, and the screen says which is which:
+ *
+ *   - a **link**, standing on its own;
+ *   - a **group** — a top-level row of kind `HEADING`, which is a title with
+ *     links under it. That is what the footer draws as a column, so a group in
+ *     this list is one column on the site.
  */
 export function MenuBuilder({
   menu,
@@ -124,6 +147,20 @@ export function MenuBuilder({
     });
   }
 
+  /** Sub-links reorder too: inside a footer column their order is the column. */
+  function moveChild(top: number, child: number, delta: number) {
+    setItems((current) =>
+      current.map((item, i) => {
+        if (i !== top) return item;
+        const next = [...item.children];
+        const target = child + delta;
+        if (target < 0 || target >= next.length) return item;
+        [next[child], next[target]] = [next[target]!, next[child]!];
+        return { ...item, children: next };
+      }),
+    );
+  }
+
   function save() {
     setFormError(null);
     startSaving(async () => {
@@ -159,11 +196,26 @@ export function MenuBuilder({
         </p>
       )}
 
-      {items.map((item, index) => (
+      {items.map((item, index) => {
+        const isGroup = item.targetKind === 'HEADING';
+        return (
         <section
           key={index}
-          className="bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-[var(--shadow-card)]"
+          className={cn(
+            'bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-[var(--shadow-card)]',
+            // A group is a container, not a link. The tint is what tells the two
+            // apart at a glance in a list that is otherwise a wall of identical
+            // white cards.
+            isGroup && 'bg-muted/40 border-dashed',
+          )}
         >
+          {isGroup && (
+            <p className="text-muted-foreground text-xs font-medium uppercase tracking-wide">
+              Group · {item.children.length}{' '}
+              {item.children.length === 1 ? 'link' : 'links'} · one column in the footer
+            </p>
+          )}
+
           <div className="flex items-start gap-2">
             <div className="flex shrink-0 flex-col">
               <button
@@ -217,10 +269,33 @@ export function MenuBuilder({
               {item.children.map((child, childIndex) => (
                 <li key={childIndex} className="flex items-start gap-2">
                   <CornerDownRightIcon className="text-muted-foreground mt-2 size-4 shrink-0" />
+
+                  <div className="flex shrink-0 flex-col">
+                    <button
+                      type="button"
+                      onClick={() => moveChild(index, childIndex, -1)}
+                      disabled={childIndex === 0}
+                      aria-label="Move this sub-link up"
+                      className="text-muted-foreground hover:text-foreground rounded p-0.5 disabled:opacity-30"
+                    >
+                      <ChevronUpIcon className="size-4" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => moveChild(index, childIndex, 1)}
+                      disabled={childIndex === item.children.length - 1}
+                      aria-label="Move this sub-link down"
+                      className="text-muted-foreground hover:text-foreground rounded p-0.5 disabled:opacity-30"
+                    >
+                      <ChevronDownIcon className="size-4" />
+                    </button>
+                  </div>
+
                   <div className="min-w-0 flex-1">
                     <LinkFields
                       value={child}
                       targets={targets}
+                      kinds={CHILD_TARGET_KINDS}
                       onChange={(changes) => updateChild(index, childIndex, changes)}
                     />
                   </div>
@@ -257,10 +332,11 @@ export function MenuBuilder({
             onClick={() => updateTop(index, { children: [...item.children, blank()] })}
           >
             <PlusIcon className="size-4" />
-            Add a sub-link
+            {isGroup ? 'Add a link to this group' : 'Add a sub-link'}
           </Button>
         </section>
-      ))}
+        );
+      })}
 
       {formError && (
         <p className="rounded-md bg-[var(--critical-bg)] px-3 py-2 text-xs text-[var(--critical-fg)]">
@@ -277,6 +353,10 @@ export function MenuBuilder({
           <PlusIcon className="size-4" />
           Add a link
         </Button>
+        <Button type="button" variant="outline" onClick={() => setItems((c) => [...c, blankGroup()])}>
+          <PlusIcon className="size-4" />
+          Add a group
+        </Button>
         <Button type="button" disabled={isSaving} onClick={save}>
           {isSaving ? (
             <LoaderCircleIcon className="size-4 animate-spin" />
@@ -290,16 +370,26 @@ export function MenuBuilder({
   );
 }
 
-/** Label, what it points at, and — for a raw URL only — the address. */
+/**
+ * Label, what it points at, and — for a raw URL only — the address.
+ *
+ * `kinds` is narrowed to exclude `HEADING` for a sub-link: a title inside a
+ * group would head nothing, and offering the option only to reject it on save
+ * is a worse way to say so than not offering it.
+ */
 function LinkFields({
   value,
   targets,
+  kinds = MENU_TARGET_KINDS,
   onChange,
 }: {
   value: Draft;
   targets: MenuTargetOptionsDto;
+  kinds?: readonly MenuTargetKind[];
   onChange: (changes: Partial<Draft>) => void;
 }) {
+  const isHeading = value.targetKind === 'HEADING';
+
   const options =
     value.targetKind === 'CATEGORY'
       ? targets.categories
@@ -312,13 +402,14 @@ function LinkFields({
             : [];
 
   return (
-    <div className="grid gap-2 sm:grid-cols-3">
+    <div className={cn('grid gap-2', isHeading ? 'sm:grid-cols-2' : 'sm:grid-cols-3')}>
       <div className="flex flex-col gap-1.5">
         <Label className="sr-only">Label</Label>
         <Input
           value={value.labelEn}
           onChange={(e) => onChange({ labelEn: e.target.value })}
-          placeholder="Label"
+          placeholder={isHeading ? 'Group title — e.g. Policy' : 'Label'}
+          className={cn(isHeading && 'font-medium')}
         />
       </div>
 
@@ -334,7 +425,7 @@ function LinkFields({
           <SelectValue />
         </SelectTrigger>
         <SelectContent>
-          {MENU_TARGET_KINDS.map((kind) => (
+          {kinds.map((kind) => (
             <SelectItem key={kind} value={kind}>
               {MENU_TARGET_LABELS[kind]}
             </SelectItem>
@@ -342,7 +433,8 @@ function LinkFields({
         </SelectContent>
       </Select>
 
-      {value.targetKind === 'URL' ? (
+      {/* A group title has no third field: there is nothing for it to hold. */}
+      {isHeading ? null : value.targetKind === 'URL' ? (
         <Input
           value={value.url}
           onChange={(e) => onChange({ url: e.target.value })}
