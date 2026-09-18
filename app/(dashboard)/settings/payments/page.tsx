@@ -30,9 +30,11 @@ export default async function PaymentsSettingsPage() {
           <div className="flex items-start gap-2.5 rounded-md bg-[var(--warning-bg)] px-3 py-2.5 text-xs text-[var(--warning-fg)]">
             <TriangleAlertIcon className="mt-px size-4 shrink-0" />
             <p>
-              <span className="font-medium">Credentials cannot be saved.</span> The server has no{' '}
-              <code className="font-mono">SETTINGS_ENCRYPTION_KEY</code>, and storing a gateway key
-              in the clear is not something this will do. Everything else on this page still saves.
+              <span className="font-medium">Credentials cannot be saved.</span> The server has no
+              usable <code className="font-mono">SETTINGS_ENCRYPTION_KEY</code> — it is either unset
+              or not 32 bytes of base64url, which a 32-character passphrase (24 bytes) and a hex
+              string (48 bytes) both fail. Storing a gateway key in the clear is not something this
+              will do. Everything else on this page still saves.
             </p>
           </div>
         )}

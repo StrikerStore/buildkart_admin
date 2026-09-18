@@ -44,9 +44,9 @@ export function ProviderForms({ providers }: { providers: NotificationProvidersD
           <TriangleAlertIcon className="mt-px size-4 shrink-0" />
           <p>
             <span className="font-medium">Credentials cannot be saved.</span> The server
-            has no <code className="font-mono">SETTINGS_ENCRYPTION_KEY</code>, and storing
-            an API key in the clear is not something this will do. Everything else still
-            saves.
+            has no usable <code className="font-mono">SETTINGS_ENCRYPTION_KEY</code> — it is
+            either unset or not 32 bytes of base64url. Storing an API key in the clear is not
+            something this will do. Everything else still saves.
           </p>
         </div>
       )}

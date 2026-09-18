@@ -185,8 +185,10 @@ export function LocationForm({
                 {!secretsKeyConfigured && (
                   <p className="flex items-start gap-2 rounded-md bg-[var(--warning-bg)] px-3 py-2 text-xs text-[var(--warning-fg)]">
                     <TriangleAlertIcon className="mt-px size-4 shrink-0" />
-                    The server has no <code className="font-mono">SETTINGS_ENCRYPTION_KEY</code>,
-                    so the geocoding key cannot be saved. Everything else here still saves.
+                    The server has no usable{' '}
+                    <code className="font-mono">SETTINGS_ENCRYPTION_KEY</code> — unset, or not 32
+                    bytes of base64url — so the geocoding key cannot be saved. Everything else here
+                    still saves.
                   </p>
                 )}
               </>
