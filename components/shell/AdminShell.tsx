@@ -31,13 +31,13 @@ export function AdminShell({
   return (
     <div className="flex h-full overflow-hidden">
       <div className="hidden lg:block">
-        <AdminSidebar badges={badges} />
+        <AdminSidebar role={admin.role} badges={badges} />
       </div>
 
       <Sheet open={navOpen} onOpenChange={setNavOpen}>
         <SheetContent side="left" className="w-[232px] border-0 bg-[var(--nav)] p-0">
           <SheetTitle className="sr-only">Navigation</SheetTitle>
-          <AdminSidebar badges={badges} onNavigate={() => setNavOpen(false)} />
+          <AdminSidebar role={admin.role} badges={badges} onNavigate={() => setNavOpen(false)} />
         </SheetContent>
       </Sheet>
 

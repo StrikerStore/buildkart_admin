@@ -5,7 +5,7 @@ import { formatStoreDate } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { NotifyRequestsButton } from '@/components/delivery/NotifyRequestsButton';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requirePermission } from '@/lib/auth/requireAdmin';
 
 export const metadata: Metadata = { title: 'Area requests' };
 
@@ -17,7 +17,7 @@ export const metadata: Metadata = { title: 'Area requests' };
  * about areas, not about individuals.
  */
 export default async function PincodeRequestsPage() {
-  await requireAdmin();
+  await requirePermission('delivery:write');
   const grouped = await (await api()).operations.areaRequests.query();
 
   return (

@@ -6,13 +6,14 @@ import { cn } from '@/lib/utils';
 import { BuildKartMark } from './BuildKartMark';
 import {
   CHANGELOG_ITEM,
-  NAV_ITEMS,
+  navItemsFor,
   SETTINGS_ITEM,
   isActivePath,
   isSectionActive,
   type NavBadgeKey,
   type NavItem,
 } from './nav-config';
+import type { AdminRole } from '@StrikerStore/contract';
 
 /** Counts the sidebar may render, keyed by `NavItem.badgeKey`. */
 export type NavBadges = Partial<Record<NavBadgeKey, number>>;
@@ -97,9 +98,12 @@ function NavLink({
 }
 
 export function AdminSidebar({
+  role,
   badges,
   onNavigate,
 }: {
+  /** Decides which sections are offered. The pages themselves still enforce it. */
+  role: AdminRole;
   badges?: NavBadges;
   onNavigate?: () => void;
 }) {
@@ -118,7 +122,7 @@ export function AdminSidebar({
 
       <div className="flex-1 overflow-y-auto px-2 py-3">
         <ul className="flex flex-col gap-px">
-          {NAV_ITEMS.map((item) => (
+          {navItemsFor(role).map((item) => (
             <NavLink
               key={item.href}
               item={item}

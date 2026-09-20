@@ -1,29 +1,29 @@
 import type { Metadata } from 'next';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
-import { PincodeTable } from '@/components/delivery/PincodeTable';
+import { WarehouseTable } from '@/components/delivery/WarehouseTable';
 import { requirePermission } from '@/lib/auth/requireAdmin';
 
-export const metadata: Metadata = { title: 'Serviceable pincodes' };
+export const metadata: Metadata = { title: 'Warehouses' };
 
-export default async function PincodesPage() {
+export default async function WarehousesPage() {
   await requirePermission('delivery:write');
-  const rows = await (await api()).operations.pincodes.query();
+  const rows = await (await api()).operations.warehouses.query();
 
   const live = rows.filter((row) => row.isActive).length;
 
   return (
     <PageContainer>
       <PageHeader
-        title="Serviceable pincodes"
+        title="Warehouses"
         subtitle={
           rows.length > 0
-            ? `${live} area${live === 1 ? '' : 's'} delivering, ${rows.length} listed`
-            : 'Where BuildKart delivers, and what it costs.'
+            ? `${live} serving orders, ${rows.length} listed`
+            : 'Where orders ship from, and how far that is.'
         }
       />
       <div className="flex flex-col gap-4">
-        <PincodeTable rows={rows} />
+        <WarehouseTable rows={rows} />
       </div>
     </PageContainer>
   );

@@ -14,6 +14,7 @@ import {
   SettingsIcon,
   type LucideIcon,
 } from 'lucide-react';
+import { can, type AdminRole, type Permission } from '@StrikerStore/contract';
 
 export type NavChild = {
   label: string;
@@ -37,7 +38,20 @@ export type NavItem = {
   /** Rendered as a nested list once the section is active, mirroring Shopify's nav. */
   children?: NavChild[];
   badgeKey?: NavBadgeKey;
+  /**
+   * Hides the item from roles that lack it.
+   *
+   * Presentation only — the page itself calls `requirePermission`, and that is
+   * the boundary. This is about not offering somebody a door they cannot open:
+   * a link that 403s is worse than no link.
+   */
+  permission?: Permission;
 };
+
+/** The items a role should be shown. See `NavItem.permission`. */
+export function navItemsFor(role: AdminRole): NavItem[] {
+  return NAV_ITEMS.filter((item) => !item.permission || can(role, item.permission));
+}
 
 /**
  * Ordered by how often the owner touches each area on a normal day: orders and
@@ -80,8 +94,11 @@ export const NAV_ITEMS: NavItem[] = [
     label: 'Delivery',
     href: '/delivery/pincodes',
     icon: TruckIcon,
+    permission: 'delivery:write',
     children: [
       { label: 'Serviceable pincodes', href: '/delivery/pincodes' },
+      { label: 'Warehouses', href: '/delivery/warehouses' },
+      { label: 'Delivery charges', href: '/delivery/charges' },
       { label: 'Area requests', href: '/delivery/requests' },
     ],
   },
