@@ -89,7 +89,17 @@ export const NAV_ITEMS: NavItem[] = [
    * visits from the screen where they noticed they were retyping something.
    */
   { label: 'Support', href: '/support', icon: LifeBuoyIcon, badgeKey: 'support' },
-  { label: 'Discounts', href: '/discounts', icon: TagIcon },
+  {
+    label: 'Discounts',
+    href: '/discounts',
+    icon: TagIcon,
+    // A sibling root rather than `/discounts/wallet`: a child nested under its
+    // parent's href would light both rows at once.
+    children: [
+      { label: 'Coupons', href: '/discounts' },
+      { label: 'Wallet & cashback', href: '/wallet-cashback' },
+    ],
+  },
   {
     label: 'Delivery',
     href: '/delivery/pincodes',
@@ -99,6 +109,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Serviceable pincodes', href: '/delivery/pincodes' },
       { label: 'Warehouses', href: '/delivery/warehouses' },
       { label: 'Delivery charges', href: '/delivery/charges' },
+      { label: 'Unloading service', href: '/delivery/unloading' },
       { label: 'Area requests', href: '/delivery/requests' },
     ],
   },

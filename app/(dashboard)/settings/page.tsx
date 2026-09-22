@@ -1,11 +1,11 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CreditCardIcon, KeyRoundIcon, PercentIcon, WalletIcon } from 'lucide-react';
+import { CreditCardIcon, KeyRoundIcon, PercentIcon } from 'lucide-react';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { CommerceSettingsForm, StoreProfileForm } from '@/components/settings/SettingsForms';
 import { getCurrentAdmin, requirePermission } from '@/lib/auth/requireAdmin';
-import { can, formatINR } from '@StrikerStore/contract';
+import { can } from '@StrikerStore/contract';
 
 export const metadata: Metadata = { title: 'Settings' };
 
@@ -33,22 +33,8 @@ export default async function SettingsPage() {
   await requirePermission('settings:write');
 
   const admin = await getCurrentAdmin();
-  const { store, commerce, wallet } = await (await api()).content.settings.query();
+  const { store, commerce } = await (await api()).content.settings.query();
 
-  // One line saying what the wallet is doing right now, so the card is useful
-  // without opening it.
-  const walletSummary = !wallet.enabled
-    ? 'Switched off — customers cannot see or use it.'
-    : [
-        wallet.signupBonus.enabled && `${formatINR(wallet.signupBonus.amount)} signup bonus`,
-        wallet.cashback.enabled &&
-          wallet.cashback.slabs.length > 0 &&
-          `cashback ${wallet.cashback.slabs.map((s) => `${s.percent}% above ${formatINR(s.minOrderValue)}`).join(', ')}`,
-        wallet.redemption.enabled &&
-          `up to ${wallet.redemption.maxPercentOfOrder}% of orders above ${formatINR(wallet.redemption.minOrderValue)}`,
-      ]
-        .filter(Boolean)
-        .join(' · ') || 'On, but every rule is switched off.';
 
   // Payments sit behind their own permission, so the card is only offered to
   // someone who could actually open it — a link that 403s is worse than none.
@@ -98,16 +84,6 @@ export default async function SettingsPage() {
             </Link>
           </Card>
         )}
-
-        <Card title="Wallet & cashback" subtitle={walletSummary}>
-          <Link
-            href="/settings/wallet"
-            className="inline-flex w-fit items-center gap-2 font-medium hover:underline"
-          >
-            <WalletIcon className="size-4" />
-            Set the signup bonus, cashback slabs and wallet limits
-          </Link>
-        </Card>
 
         <Card
           title="Tax"

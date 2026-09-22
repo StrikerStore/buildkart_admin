@@ -149,7 +149,7 @@ export function WalletAdjustDialog({
                   <span className="text-xs text-[var(--critical-fg)]">{errors.validityDays}</span>
                 ) : (
                   <span className="text-muted-foreground text-xs">
-                    Blank uses the default from Settings → Wallet &amp; cashback.
+                    Blank uses the default from Discounts → Wallet &amp; cashback.
                   </span>
                 )}
               </div>

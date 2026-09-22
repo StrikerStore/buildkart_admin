@@ -256,6 +256,12 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <span className="text-neutral-600">Delivery</span>
               <span className="tabular">{formatINR(order.deliveryCharge)}</span>
             </div>
+            {order.unloadingCharge !== '0.00' && (
+              <div className="flex justify-between">
+                <span className="text-neutral-600">Unloading service</span>
+                <span className="tabular">{formatINR(order.unloadingCharge)}</span>
+              </div>
+            )}
             <div className="mt-1 flex justify-between border-t pt-1.5 text-base font-bold">
               <span>Total</span>
               <span className="tabular">{formatINR(order.grandTotal)}</span>

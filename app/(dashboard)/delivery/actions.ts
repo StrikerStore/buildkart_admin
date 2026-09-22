@@ -84,3 +84,9 @@ export async function loadWarehouseStock(input: {
 }) {
   return (await api()).operations.warehouseStock.query(input);
 }
+
+export async function saveUnloadingService(input: unknown): Promise<ActionResult<void>> {
+  const result = await (await api()).operations.saveUnloadingService.mutate(input);
+  if (result.ok) revalidatePath('/delivery/unloading');
+  return result;
+}

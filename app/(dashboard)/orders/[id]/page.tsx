@@ -192,6 +192,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 />
               )}
               <TotalRow label="Delivery" value={formatINR(order.deliveryCharge)} muted />
+              {order.unloadingCharge !== '0.00' && (
+                <TotalRow label="Unloading service" value={formatINR(order.unloadingCharge)} muted />
+              )}
               <TotalRow label="Total" value={formatINR(order.grandTotal)} strong />
               {/* Already inside the payments below — shown here so the total
                   and what is left to collect can be read side by side. */}
