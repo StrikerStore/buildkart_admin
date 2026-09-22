@@ -260,6 +260,14 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
               <span>Total</span>
               <span className="tabular">{formatINR(order.grandTotal)}</span>
             </div>
+            {/* Store credit is a way of paying, not a discount: the invoice
+                total and its GST stand, and this says how part of it was paid. */}
+            {order.walletApplied !== '0.00' && (
+              <div className="flex justify-between">
+                <span className="text-neutral-600">Paid via store credit</span>
+                <span className="tabular">{formatINR(order.walletApplied)}</span>
+              </div>
+            )}
             {hasTax && order.taxAddedTotal === '0.00' && (
               <p className="text-neutral-600">Inclusive of {formatINR(order.taxTotal)} GST</p>
             )}

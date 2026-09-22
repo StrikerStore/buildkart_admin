@@ -16,6 +16,12 @@ export async function updateCustomer(input: unknown): Promise<ActionResult<void>
   return result;
 }
 
+export async function adjustWallet(input: unknown): Promise<ActionResult<{ balance: string }>> {
+  const result = await (await api()).orders.adjustWallet.mutate(input);
+  if (result.ok) revalidateCustomer(input);
+  return result;
+}
+
 export async function setCustomerBlocked(input: unknown): Promise<ActionResult<void>> {
   const result = await (await api()).orders.setCustomerBlocked.mutate(input);
   if (result.ok) revalidateCustomer(input);

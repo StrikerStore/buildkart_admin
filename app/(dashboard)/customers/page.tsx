@@ -85,6 +85,7 @@ export default async function CustomersPage({
               <span className="w-[150px] shrink-0">Last order</span>
               <span className="w-[80px] shrink-0 text-right">Orders</span>
               <span className="w-[110px] shrink-0 text-right">Spend</span>
+              <span className="w-[100px] shrink-0 text-right">Wallet</span>
             </div>
 
             <ul>
@@ -126,6 +127,10 @@ export default async function CustomersPage({
 
                     <span className="tabular shrink-0 text-right font-medium md:w-[110px]">
                       {formatINR(customer.totalSpend)}
+                    </span>
+
+                    <span className="text-muted-foreground tabular shrink-0 text-right text-xs md:w-[100px]">
+                      {customer.walletBalance === '0.00' ? '—' : formatINR(customer.walletBalance)}
                     </span>
                   </Link>
                 </li>

@@ -2,12 +2,19 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
 import { PlusIcon } from 'lucide-react';
-import { formatINR, formatStoreDate, formatStoreDateTimeShort } from '@StrikerStore/contract';
+import {
+  WALLET_ENTRY_LABELS,
+  can,
+  formatINR,
+  formatStoreDate,
+  formatStoreDateTimeShort,
+} from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { CustomerDetailForm } from '@/components/customers/CustomerDetailForm';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { WalletAdjustDialog } from '@/components/customers/WalletAdjustDialog';
+import { getCurrentAdmin, requireAdmin } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
 
 export async function generateMetadata({
@@ -42,8 +49,14 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   await requireAdmin();
   const { id } = await params;
 
-  const customer = await (await api()).orders.customerDetail.query({ id });
+  const client = await api();
+  const [customer, wallet, admin] = await Promise.all([
+    client.orders.customerDetail.query({ id }),
+    client.orders.customerWallet.query({ customerId: id, limit: 25 }),
+    getCurrentAdmin(),
+  ]);
   if (!customer) notFound();
+  const canAdjustWallet = admin ? can(admin.role, 'wallet:write') : false;
 
   return (
     <PageContainer>
@@ -74,10 +87,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-w-0 flex-col gap-4">
           <Card>
-            <div className="grid grid-cols-3 gap-4">
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
               <Stat label="Orders" value={String(customer.totalOrders)} />
               <Stat label="Lifetime spend" value={formatINR(customer.totalSpend)} />
               <Stat label="Average order" value={formatINR(customer.averageOrderValue)} />
+              <Stat label="Wallet" value={formatINR(wallet.balance)} />
             </div>
           </Card>
 
@@ -111,6 +125,86 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                         {formatINR(order.grandTotal)}
                       </span>
                     </Link>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </Card>
+
+          <Card title="Wallet">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="text-muted-foreground flex flex-col gap-0.5 text-xs">
+                <span>
+                  Balance{' '}
+                  <span className="text-foreground tabular font-medium">
+                    {formatINR(wallet.balance)}
+                  </span>
+                </span>
+                {wallet.pendingCashback !== '0.00' && (
+                  <span>{formatINR(wallet.pendingCashback)} cashback pending on undelivered orders</span>
+                )}
+                {wallet.expiringSoon && (
+                  <span>
+                    {formatINR(wallet.expiringSoon.amount)} expires{' '}
+                    {formatStoreDate(wallet.expiringSoon.expiresAt)}
+                  </span>
+                )}
+              </div>
+              {canAdjustWallet && (
+                <WalletAdjustDialog customerId={customer.id} balance={wallet.balance} />
+              )}
+            </div>
+
+            {wallet.entries.length === 0 ? (
+              <p className="text-muted-foreground py-4 text-center text-xs">No wallet activity yet.</p>
+            ) : (
+              <ul className="flex flex-col">
+                {wallet.entries.map((entry) => (
+                  <li
+                    key={entry.id}
+                    className="flex items-start gap-3 border-b py-2 text-sm last:border-b-0"
+                  >
+                    <span className="text-muted-foreground w-[130px] shrink-0 text-xs">
+                      {formatStoreDateTimeShort(entry.createdAt)}
+                    </span>
+                    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                      <span className="font-medium">
+                        {WALLET_ENTRY_LABELS[entry.type].en}
+                        {entry.orderId && entry.orderNumber && (
+                          <>
+                            {' · '}
+                            <Link href={`/orders/${entry.orderId}`} className="hover:underline">
+                              {entry.orderNumber}
+                            </Link>
+                          </>
+                        )}
+                      </span>
+                      {(entry.note || entry.adminName) &&
+                        (entry.type === 'ADMIN_CREDIT' || entry.type === 'ADMIN_DEBIT') && (
+                          <span className="text-muted-foreground text-xs">
+                            {entry.note}
+                            {entry.adminName && ` — ${entry.adminName}`}
+                          </span>
+                        )}
+                      {entry.expiresAt && (
+                        <span className="text-muted-foreground text-xs">
+                          Expires {formatStoreDate(entry.expiresAt)}
+                        </span>
+                      )}
+                    </span>
+                    <span
+                      className={
+                        entry.direction === 'CREDIT'
+                          ? 'tabular w-[92px] shrink-0 text-right font-medium text-[var(--success-fg)]'
+                          : 'tabular w-[92px] shrink-0 text-right font-medium'
+                      }
+                    >
+                      {entry.direction === 'CREDIT' ? '+' : '−'}
+                      {formatINR(entry.amount)}
+                    </span>
+                    <span className="text-muted-foreground tabular hidden w-[80px] shrink-0 text-right text-xs sm:block">
+                      {formatINR(entry.balanceAfter)}
+                    </span>
                   </li>
                 ))}
               </ul>

@@ -8,6 +8,7 @@ import {
   formatINR,
   formatStoreDateTime,
   totalPayments,
+  formatStoreDateTimeShort,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
@@ -192,6 +193,30 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               )}
               <TotalRow label="Delivery" value={formatINR(order.deliveryCharge)} muted />
               <TotalRow label="Total" value={formatINR(order.grandTotal)} strong />
+              {/* Already inside the payments below — shown here so the total
+                  and what is left to collect can be read side by side. */}
+              {order.walletApplied !== '0.00' && (
+                <TotalRow
+                  label="Paid from wallet"
+                  value={`− ${formatINR(order.walletApplied)}`}
+                  muted
+                />
+              )}
+              {order.cashbackStatus !== 'NONE' && (
+                <TotalRow
+                  label={
+                    order.cashbackStatus === 'PENDING'
+                      ? order.cashbackReleaseAt
+                        ? `Cashback · credits ${formatStoreDateTimeShort(order.cashbackReleaseAt)}`
+                        : 'Cashback · credits after delivery'
+                      : order.cashbackStatus === 'CREDITED'
+                        ? 'Cashback · credited'
+                        : 'Cashback · withdrawn'
+                  }
+                  value={formatINR(order.cashbackAmount)}
+                  muted
+                />
+              )}
               {order.bulkPricingApplied && (
                 <p className="text-muted-foreground text-xs">Bulk pricing was applied.</p>
               )}
