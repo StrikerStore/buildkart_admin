@@ -12,9 +12,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
+import { unitNoun } from './BulkBasisSelect';
 
 /**
- * A variant's bulk ladder — "20+ bags at ₹370, 40+ at ₹365".
+ * A variant's bulk ladder — "20+ bags at ₹370, 40+ at ₹365", or "5+ at ₹1,250"
+ * for something sold by the cubic metre.
  *
  * Fully controlled, like `CategoryRuleBuilder`: the rows live in the form that
  * owns the variant, so one Save writes the price and its ladder together and
@@ -34,27 +36,36 @@ export function PriceTierEditor({
   basis,
   listPrice,
   tiers,
+  unitLabel,
   onTiersChange,
 }: {
   basis: BulkTierBasis;
   /** The price each rung has to beat, so a saving can be shown per row. */
   listPrice: string;
   tiers: PriceTierDraft[];
+  /** The variant's unit label, so "From 10" says ten of what. */
+  unitLabel?: string;
   onTiersChange: (next: PriceTierDraft[]) => void;
 }) {
   const problems = validateTierLadder(basis, listPrice, tiers);
   const quantity = basis === 'QUANTITY';
+  const unit = unitNoun(unitLabel);
 
   function update(index: number, changes: Partial<PriceTierDraft>) {
     onTiersChange(tiers.map((tier, i) => (i === index ? { ...tier, ...changes } : tier)));
   }
 
-  /** What one unit saves at this rung, for the hint beside the row. */
+  /**
+   * What one unit saves at this rung, and as a percentage — the percentage is
+   * what an owner compares across sizes, since ₹50 off a ₹1,300 load and ₹50
+   * off a ₹9,000 one are very different offers.
+   */
   function savingFor(tier: PriceTierDraft): string | null {
     const list = Number(listPrice);
     const rate = Number(tier.unitPrice);
     if (!Number.isFinite(list) || !Number.isFinite(rate) || rate <= 0 || rate >= list) return null;
-    return formatINR((list - rate).toFixed(2));
+    const percent = ((list - rate) / list) * 100;
+    return `saves ${formatINR((list - rate).toFixed(2))} each · ${percent < 1 ? percent.toFixed(1) : Math.round(percent)}% off`;
   }
 
   return (
@@ -63,8 +74,10 @@ export function PriceTierEditor({
         <Label>Bulk price breaks</Label>
         <p className="text-muted-foreground text-xs">
           {quantity
-            ? 'Charged automatically once this many units are on one line.'
-            : 'Charged automatically once one line of this item is worth this much.'}
+            ? unit
+              ? `Charged automatically once this many are on one cart line — one unit is “${unit}”.`
+              : 'Charged automatically once this many units are on one cart line.'
+            : 'Charged automatically once one cart line of this item is worth this much.'}
         </p>
       </div>
 
@@ -74,18 +87,20 @@ export function PriceTierEditor({
             const saving = savingFor(tier);
             return (
               <li key={index} className="flex items-center gap-2">
-                <span className="text-muted-foreground w-12 shrink-0 text-xs">
-                  {quantity ? 'From' : 'Over'}
+                <span className="text-muted-foreground w-10 shrink-0 text-xs">
+                  {quantity ? 'From' : 'Over ₹'}
                 </span>
                 <Input
                   value={tier.threshold}
                   onChange={(e) => update(index, { threshold: e.target.value })}
-                  inputMode="decimal"
-                  placeholder={quantity ? '20' : '10000'}
+                  inputMode={quantity ? 'numeric' : 'decimal'}
+                  placeholder={quantity ? '10' : '10000'}
                   aria-label={`Break ${index + 1} ${quantity ? 'quantity' : 'order value'}`}
-                  className="tabular h-9 w-24"
+                  className="tabular h-9 w-20"
                 />
-                <span className="text-muted-foreground shrink-0 text-xs">at ₹</span>
+                <span className="text-muted-foreground shrink-0 text-xs">
+                  {quantity ? '+ at ₹' : 'at ₹'}
+                </span>
                 <Input
                   value={tier.unitPrice}
                   onChange={(e) => update(index, { unitPrice: e.target.value })}
@@ -95,7 +110,7 @@ export function PriceTierEditor({
                   className="tabular h-9 w-24"
                 />
                 <span className="text-muted-foreground min-w-0 flex-1 truncate text-xs">
-                  {saving ? `saves ${saving} each` : ''}
+                  {saving ?? ''}
                 </span>
                 <Button
                   type="button"

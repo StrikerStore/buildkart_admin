@@ -7,6 +7,7 @@ import {
   type BulkTierBasis,
   type VariantDraft,
 } from '@StrikerStore/contract';
+import { BulkBasisSelect } from './BulkBasisSelect';
 import { PriceTierEditor } from './PriceTierEditor';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -146,31 +147,23 @@ export function PricingSection({
           * The bulk ladder, and how its thresholds are read.
           *
           * The basis sits above the rungs because changing it reinterprets
-          * every one of them — 20 bags and ₹20 are the same digits — so the
+          * every one of them — 20 units and ₹20 are the same digits — so the
           * ladder clears when it changes rather than silently keeping numbers
           * that now mean something else.
           */}
         <div className="flex flex-col gap-3 border-t pt-4">
-          <div className="flex flex-col gap-1.5">
-            <Label htmlFor="bulkBasis">Bulk pricing works by</Label>
-            <Select
-              value={bulkTierBasis}
-              onValueChange={(next) => onBasisChange(next as BulkTierBasis)}
-            >
-              <SelectTrigger id="bulkBasis" className="sm:w-[280px]">
-                <SelectValue />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="QUANTITY">Quantity on the line — 20 bags or more</SelectItem>
-                <SelectItem value="AMOUNT">Value of the line — ₹10,000 or more</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <BulkBasisSelect
+            id="bulkBasis"
+            value={bulkTierBasis}
+            onChange={onBasisChange}
+            unitLabel={variant.unitLabelEn}
+          />
 
           <PriceTierEditor
             basis={bulkTierBasis}
             listPrice={variant.price}
             tiers={variant.tiers}
+            unitLabel={variant.unitLabelEn}
             onTiersChange={(tiers) => onChange({ tiers })}
           />
         </div>

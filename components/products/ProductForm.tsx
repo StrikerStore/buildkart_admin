@@ -48,6 +48,7 @@ import { InventorySection, PricingSection } from './PricingSection';
 import { MetafieldFieldset, type MetafieldDefinitionDto } from './MetafieldFieldset';
 import { OptionAxisEditor } from './OptionAxisEditor';
 import { VariantMatrixEditor } from './VariantMatrixEditor';
+import { BulkBasisSelect } from './BulkBasisSelect';
 import { createProduct, updateProduct, deleteProduct } from '@/app/(dashboard)/products/actions';
 import { duplicateProduct } from '@/app/(dashboard)/products/[id]/variant-actions';
 
@@ -259,11 +260,23 @@ export function ProductForm({
   }
 
   /**
-   * Switching the basis rewrites what every threshold means — 20 bags and ₹20
+   * Switching the basis rewrites what every threshold means — 20 units and ₹20
    * are the same digits — so the ladders are cleared rather than silently
    * carried across as numbers that now say something else.
    */
   function changeBasis(next: typeof bulkTierBasis) {
+    if (next === bulkTierBasis) return;
+    // Asked, not assumed: this used to wipe every ladder without a word, which
+    // is a screen of rates lost to one mis-click on a dropdown.
+    const withTiers = variants.filter((v) => v.tiers.length > 0).length;
+    if (
+      withTiers > 0 &&
+      !window.confirm(
+        `Changing this clears the bulk price breaks on ${withTiers} variant${withTiers === 1 ? '' : 's'}, because their numbers would mean something else. Continue?`,
+      )
+    ) {
+      return;
+    }
     setBulkTierBasis(next);
     setVariants((current) => current.map((v) => (v.tiers.length > 0 ? { ...v, tiers: [] } : v)));
   }
@@ -618,25 +631,12 @@ export function ProductForm({
                         * because the matrix's per-row ladders all read the same
                         * way and the choice belongs to the product, not a row.
                         */}
-                      <div className="flex flex-col gap-1.5">
-                        <Label htmlFor="matrixBasis">Bulk pricing works by</Label>
-                        <Select
-                          value={bulkTierBasis}
-                          onValueChange={(next) => changeBasis(next as BulkTierBasis)}
-                        >
-                          <SelectTrigger id="matrixBasis" className="sm:w-[280px]">
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="QUANTITY">
-                              Quantity on the line — 20 bags or more
-                            </SelectItem>
-                            <SelectItem value="AMOUNT">
-                              Value of the line — ₹10,000 or more
-                            </SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
+                      <BulkBasisSelect
+                        id="matrixBasis"
+                        value={bulkTierBasis}
+                        onChange={changeBasis}
+                        unitLabel={variants.find((v) => v.unitLabelEn.trim() !== '')?.unitLabelEn}
+                      />
 
                       <VariantMatrixEditor
                         variants={variants}

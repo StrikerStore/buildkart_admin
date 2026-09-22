@@ -1,14 +1,17 @@
 'use client';
 
 import { useMemo, useState } from 'react';
-import { PencilIcon, AlertTriangleIcon } from 'lucide-react';
+import { PencilIcon, AlertTriangleIcon, PlusIcon, XIcon } from 'lucide-react';
 import {
+  MAX_PRICE_TIERS,
   MONEY_PATTERN,
   formatINR,
   normalizeMoney,
   toPaise,
   fromPaise,
+  validateTierLadder,
   type BulkTierBasis,
+  type PriceTierDraft,
   type VariantDraft,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
@@ -93,6 +96,7 @@ export function VariantMatrixEditor({
   const [checked, setChecked] = useState<Set<string>>(new Set());
   const [bulk, setBulk] = useState<{ field: BulkField; money: boolean } | null>(null);
   const [adjust, setAdjust] = useState(false);
+  const [bulkTiers, setBulkTiers] = useState(false);
   /** The row whose ladder is open, by matrix key. */
   const [tierRow, setTierRow] = useState<string | null>(null);
 
@@ -153,10 +157,14 @@ export function VariantMatrixEditor({
               <Button type="button" variant="outline" size="sm" onClick={() => setAdjust(true)}>
                 Adjust prices
               </Button>
+              <Button type="button" variant="outline" size="sm" onClick={() => setBulkTiers(true)}>
+                Set bulk breaks
+              </Button>
               <Select
                 onValueChange={(value) => {
                   if (value === 'activate') applyToSelected(() => ({ isActive: true }));
                   else if (value === 'deactivate') applyToSelected(() => ({ isActive: false }));
+                  else if (value === 'clearTiers') applyToSelected(() => ({ tiers: [] }));
                   else if (value === 'copyFirst') {
                     const source = selected[0];
                     if (source) {
@@ -190,6 +198,7 @@ export function VariantMatrixEditor({
                   <SelectItem value="copyFirst">Copy from first selected</SelectItem>
                   <SelectItem value="activate">Activate</SelectItem>
                   <SelectItem value="deactivate">Deactivate</SelectItem>
+                  <SelectItem value="clearTiers">Clear bulk breaks</SelectItem>
                 </SelectContent>
               </Select>
               <Button type="button" variant="ghost" size="sm" onClick={() => setChecked(new Set())}>
@@ -228,7 +237,7 @@ export function VariantMatrixEditor({
                 <th className="w-[130px] px-2 py-2">SKU</th>
                 <th className="w-[110px] px-2 py-2">Price</th>
                 <th className="w-[110px] px-2 py-2">MRP</th>
-                <th className="hidden w-[120px] px-2 py-2 lg:table-cell">Bulk breaks</th>
+                <th className="w-[170px] px-2 py-2">Bulk breaks</th>
                 <th className="w-[120px] px-2 py-2">Unit</th>
                 <th className="w-[90px] px-2 py-2">Stock</th>
                 <th className="w-[70px] px-2 py-2 text-center">Active</th>
@@ -296,22 +305,28 @@ export function VariantMatrixEditor({
 
                     {/*
                       * A ladder is a list, and there is no column shape for one.
-                      * The cell summarises it and opens the editor — hidden on
-                      * narrow screens, where the row already has more than fits.
+                      * The cell summarises it and opens the editor.
+                      *
+                      * Shown at every width. It used to be desktop-only, which
+                      * left an owner pricing from a phone — the device this
+                      * catalogue is mostly entered on — with no way to set a
+                      * bulk rate on any variant. The table already scrolls
+                      * sideways, so one more column costs nothing.
                       */}
-                    <td className="hidden px-2 py-1.5 lg:table-cell">
+                    <td className="px-2 py-1.5">
                       <Button
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="tabular h-8 w-full justify-start font-normal"
+                        className={cn(
+                          'tabular h-8 w-full justify-start truncate font-normal',
+                          validateTierLadder(bulkTierBasis, variant.price, variant.tiers).length >
+                            0 && 'border-[var(--critical-fg)] text-[var(--critical-fg)]',
+                        )}
                         onClick={() => setTierRow(variant.matrixKey)}
+                        aria-label={`Bulk price breaks for ${variant.optionValues.join(' / ') || 'this variant'}`}
                       >
-                        {variant.tiers.length === 0
-                          ? '—'
-                          : variant.tiers
-                              .map((tier) => `${tier.threshold || '?'}+`)
-                              .join(' · ')}
+                        {tierSummary(bulkTierBasis, variant.tiers)}
                       </Button>
                     </td>
 
@@ -364,6 +379,34 @@ export function VariantMatrixEditor({
           const field = bulk!.field;
           applyToSelected(() => ({ [field]: value }) as Partial<VariantDraft>);
           setBulk(null);
+        }}
+      />
+
+      {/*
+        * The row's ladder editor. It was defined below and never mounted, so
+        * the cell above set `tierRow` and nothing opened — which is why no
+        * variant of a multi-size product could be given a bulk price.
+        */}
+      <TierDialog
+        open={tierRow !== null}
+        onOpenChange={(open) => !open && setTierRow(null)}
+        basis={bulkTierBasis}
+        variant={variants.find((v) => v.matrixKey === tierRow) ?? null}
+        axisNames={axisNames}
+        onChange={(tiers) => tierRow && patch(tierRow, { tiers })}
+      />
+
+      <BulkTiersDialog
+        open={bulkTiers}
+        basis={bulkTierBasis}
+        selected={selected}
+        onClose={() => setBulkTiers(false)}
+        onApply={(ladderFor) => {
+          applyToSelected((draft) => {
+            const tiers = ladderFor(draft);
+            return tiers ? { tiers } : {};
+          });
+          setBulkTiers(false);
         }}
       />
 
@@ -607,12 +650,280 @@ function TierDialog({
           basis={basis}
           listPrice={variant.price}
           tiers={variant.tiers}
+          unitLabel={variant.unitLabelEn}
           onTiersChange={onChange}
         />
 
         <DialogFooter>
           <Button type="button" onClick={() => onOpenChange(false)}>
             Done
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/**
+ * A row's ladder in the space of a cell: "10+ ₹1,250", then "+2 more".
+ *
+ * The rate, not only the threshold. "10+ · 20+" said where the breaks were and
+ * nothing about what they charged, so checking a matrix meant opening every
+ * row.
+ */
+function tierSummary(basis: BulkTierBasis, tiers: PriceTierDraft[]): string {
+  if (tiers.length === 0) return '+ Add';
+  const first = tiers[0]!;
+  const threshold =
+    basis === 'QUANTITY'
+      ? `${first.threshold || '?'}+`
+      : MONEY_PATTERN.test(first.threshold)
+        ? `${formatINR(first.threshold)}+`
+        : '₹?+';
+  const rate = MONEY_PATTERN.test(first.unitPrice) ? formatINR(first.unitPrice) : '₹?';
+  return `${threshold} ${rate}${tiers.length > 1 ? ` · +${tiers.length - 1} more` : ''}`;
+}
+
+type LadderRow = { threshold: string; value: string };
+
+const EMPTY_ROW: LadderRow = { threshold: '', value: '' };
+
+function validPercent(value: string): boolean {
+  const percent = Number(value);
+  return value.trim() !== '' && Number.isFinite(percent) && percent > 0 && percent < 100;
+}
+
+/**
+ * One ladder, applied to every selected row at once.
+ *
+ * **By percentage, or by a fixed rate.** A product sold in 1, 2, 5 and 10 cubic
+ * metre loads cannot share a rupee rate — ₹1,250 is a discount on the smallest
+ * and a giveaway on the largest — but "5% off from 10 up" means the same thing
+ * on every size. Percent is the default for that reason; the fixed rate is for
+ * sizes that genuinely sell at one price.
+ *
+ * The result is written as ordinary per-row rungs, so each row can still be
+ * fine-tuned afterwards in its own dialog. Rows without a valid price are left
+ * alone rather than given a ladder computed from nothing.
+ */
+function BulkTiersDialog({
+  open,
+  basis,
+  selected,
+  onClose,
+  onApply,
+}: {
+  open: boolean;
+  basis: BulkTierBasis;
+  selected: VariantDraft[];
+  onClose: () => void;
+  /** Receives a function giving each row its ladder, or null to leave it. */
+  onApply: (ladderFor: (draft: VariantDraft) => PriceTierDraft[] | null) => void;
+}) {
+  const [mode, setMode] = useState<'percent' | 'rate'>('percent');
+  const [rows, setRows] = useState<LadderRow[]>([EMPTY_ROW]);
+  const quantity = basis === 'QUANTITY';
+
+  function close() {
+    setRows([EMPTY_ROW]);
+    setMode('percent');
+    onClose();
+  }
+
+  function update(index: number, changes: Partial<LadderRow>) {
+    setRows((current) => current.map((row, i) => (i === index ? { ...row, ...changes } : row)));
+  }
+
+  const filled = rows.filter((row) => row.threshold.trim() !== '' || row.value.trim() !== '');
+
+  /** The ladder this dialog would give one row, or null if the row has no price. */
+  function ladderFor(draft: VariantDraft): PriceTierDraft[] | null {
+    if (!MONEY_PATTERN.test(draft.price)) return null;
+    const listPaise = toPaise(draft.price);
+
+    return filled.map((row) => {
+      const threshold =
+        !quantity && MONEY_PATTERN.test(row.threshold)
+          ? normalizeMoney(row.threshold)
+          : row.threshold.trim();
+
+      if (mode === 'rate') {
+        return {
+          threshold,
+          unitPrice: MONEY_PATTERN.test(row.value) ? normalizeMoney(row.value) : row.value.trim(),
+        };
+      }
+
+      return {
+        threshold,
+        // Rounded to the rupee: a bulk rate of ₹1,234.35 reads as arithmetic,
+        // not as a price anyone quoted.
+        unitPrice: validPercent(row.value)
+          ? fromPaise(Math.round((listPaise * (100 - Number(row.value))) / 10_000) * 100)
+          : row.value,
+      };
+    });
+  }
+
+  const priced = selected.filter((draft) => MONEY_PATTERN.test(draft.price));
+  const unpriced = selected.length - priced.length;
+
+  /*
+   * Checked with the same validator as the per-row editor and the server, on
+   * every row it would land on — a ladder that is fine for the ₹9,000 size can
+   * still clash with the ₹1,300 one.
+   */
+  const problems =
+    mode === 'percent' && filled.some((row) => !validPercent(row.value))
+      ? ['Enter a percentage between 0 and 100, like 5.']
+      : Array.from(
+          new Set(
+            priced.flatMap((draft) =>
+              validateTierLadder(basis, draft.price, ladderFor(draft) ?? []).map((problem) =>
+                priced.length > 1
+                  ? `${draft.optionValues.join(' / ') || 'Default'}: ${problem}`
+                  : problem,
+              ),
+            ),
+          ),
+        ).slice(0, 6);
+
+  const canApply = filled.length > 0 && problems.length === 0 && priced.length > 0;
+  const preview = priced.slice(0, 4);
+
+  return (
+    <Dialog open={open} onOpenChange={(next) => !next && close()}>
+      <DialogContent className="sm:max-w-[560px]">
+        <DialogHeader>
+          <DialogTitle>Set bulk price breaks</DialogTitle>
+          <DialogDescription>
+            Replaces the bulk breaks on {selected.length} selected variant
+            {selected.length === 1 ? '' : 's'}.
+          </DialogDescription>
+        </DialogHeader>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="bulk-tier-mode">Bulk price as</Label>
+          <Select value={mode} onValueChange={(v) => setMode(v as typeof mode)}>
+            <SelectTrigger id="bulk-tier-mode" className="sm:w-[280px]">
+              <SelectValue />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="percent">% off each variant&apos;s price</SelectItem>
+              <SelectItem value="rate">The same ₹ rate for every variant</SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
+
+        <ul className="flex flex-col gap-2">
+          {rows.map((row, index) => (
+            <li key={index} className="flex items-center gap-2">
+              <span className="text-muted-foreground w-10 shrink-0 text-xs">
+                {quantity ? 'From' : 'Over ₹'}
+              </span>
+              <Input
+                value={row.threshold}
+                onChange={(e) => update(index, { threshold: e.target.value })}
+                inputMode={quantity ? 'numeric' : 'decimal'}
+                placeholder={quantity ? '10' : '10000'}
+                aria-label={`Break ${index + 1} ${quantity ? 'quantity' : 'order value'}`}
+                className="tabular h-9 w-20"
+              />
+              <span className="text-muted-foreground shrink-0 text-xs">
+                {quantity ? '+ ' : ''}
+                {mode === 'percent' ? 'get' : 'at ₹'}
+              </span>
+              <Input
+                value={row.value}
+                onChange={(e) => update(index, { value: e.target.value })}
+                inputMode="decimal"
+                placeholder={mode === 'percent' ? '5' : '370'}
+                aria-label={`Break ${index + 1} ${mode === 'percent' ? 'percent off' : 'rate'}`}
+                className="tabular h-9 w-20"
+              />
+              {mode === 'percent' && (
+                <span className="text-muted-foreground shrink-0 text-xs">% off</span>
+              )}
+              <div className="flex-1" />
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                onClick={() => setRows((current) => current.filter((_, i) => i !== index))}
+                aria-label={`Remove price break ${index + 1}`}
+                disabled={rows.length === 1}
+              >
+                <XIcon className="size-4" />
+              </Button>
+            </li>
+          ))}
+        </ul>
+
+        {rows.length < MAX_PRICE_TIERS && (
+          <div>
+            <Button
+              type="button"
+              variant="outline"
+              size="sm"
+              onClick={() => setRows((current) => [...current, EMPTY_ROW])}
+            >
+              <PlusIcon className="size-4" />
+              Add another break
+            </Button>
+          </div>
+        )}
+
+        {canApply && preview.length > 0 && (
+          <div className="bg-muted/40 flex flex-col gap-1 rounded-md border p-2 text-xs">
+            {preview.map((draft) => (
+              <div key={draft.matrixKey} className="flex items-center justify-between gap-2">
+                <span className="truncate">
+                  {draft.optionValues.join(' / ') || 'Default'} · {formatINR(draft.price)}
+                </span>
+                <span className="tabular shrink-0 font-medium">
+                  {(ladderFor(draft) ?? [])
+                    .map(
+                      (tier) =>
+                        `${quantity ? `${tier.threshold}+` : `${formatINR(tier.threshold)}+`} ${formatINR(tier.unitPrice)}`,
+                    )
+                    .join(' · ')}
+                </span>
+              </div>
+            ))}
+            {priced.length > preview.length && (
+              <p className="text-muted-foreground">and {priced.length - preview.length} more…</p>
+            )}
+          </div>
+        )}
+
+        {unpriced > 0 && (
+          <p className="text-muted-foreground text-xs">
+            {unpriced} selected variant{unpriced === 1 ? ' has' : 's have'} no price yet and will
+            be skipped.
+          </p>
+        )}
+
+        {filled.length > 0 && problems.length > 0 && (
+          <ul className="flex flex-col gap-0.5 text-xs text-[var(--critical-fg)]">
+            {problems.map((problem) => (
+              <li key={problem}>{problem}</li>
+            ))}
+          </ul>
+        )}
+
+        <DialogFooter>
+          <Button type="button" variant="outline" onClick={close}>
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            disabled={!canApply}
+            onClick={() => {
+              onApply(ladderFor);
+              close();
+            }}
+          >
+            Apply
           </Button>
         </DialogFooter>
       </DialogContent>
