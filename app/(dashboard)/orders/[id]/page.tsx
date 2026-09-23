@@ -19,6 +19,8 @@ import { OrderNoteEditor } from '@/components/orders/OrderSideControls';
 import { PaymentPanel } from '@/components/orders/PaymentPanel';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { api, serverConfig } from '@/lib/api/server';
+import { adminMap } from '@/lib/maps';
+import { PinEmbed } from '@/components/maps/PinEmbed';
 
 export async function generateMetadata({
   params,
@@ -64,7 +66,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   await requireAdmin();
   const { id } = await params;
 
-  const order = await (await api()).orders.detail.query({ id });
+  const [order, map] = await Promise.all([(await api()).orders.detail.query({ id }), adminMap()]);
   if (!order) notFound();
 
   const { publicBaseUrl, transformsEnabled } = (await serverConfig()).media;
@@ -278,6 +280,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 </a>
               )}
             </address>
+
+            {/* The pin the customer dropped — where the rider actually goes.
+                Counter orders and older orders have none. */}
+            {address.latitude != null && address.longitude != null && (
+              <PinEmbed apiKey={map.apiKey} lat={address.latitude} lng={address.longitude} />
+            )}
           </Card>
 
           <Card title="Payment">

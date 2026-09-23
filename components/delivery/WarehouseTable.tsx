@@ -24,7 +24,9 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
+import { PinPicker } from '@/components/maps/PinPicker';
 import { deleteWarehouse, saveWarehouse } from '@/app/(dashboard)/delivery/actions';
+import type { AdminMap } from '@/lib/maps';
 import { cn } from '@/lib/utils';
 
 export type WarehouseRow = {
@@ -84,7 +86,17 @@ function Field({
   );
 }
 
-export function WarehouseTable({ rows }: { rows: WarehouseRow[] }) {
+/** The typed coordinates as a point, or null while either is blank or half-typed. */
+function pickerValue(latitude: string, longitude: string): { lat: number; lng: number } | null {
+  if (latitude.trim() === '' || longitude.trim() === '') return null;
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+  if (Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+
+export function WarehouseTable({ rows, map }: { rows: WarehouseRow[]; map: AdminMap }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState({ ...EMPTY });
@@ -243,7 +255,7 @@ export function WarehouseTable({ rows }: { rows: WarehouseRow[] }) {
       )}
 
       <Dialog open={open} onOpenChange={(next) => !next && setOpen(false)}>
-        <DialogContent className="sm:max-w-[560px]">
+        <DialogContent className="max-h-[calc(100dvh-2rem)] overflow-y-auto sm:max-w-[560px]">
           <DialogHeader>
             <DialogTitle>{form.id ? 'Edit warehouse' : 'Add warehouse'}</DialogTitle>
             <DialogDescription>
@@ -343,7 +355,11 @@ export function WarehouseTable({ rows }: { rows: WarehouseRow[] }) {
               label="Latitude"
               htmlFor="lat"
               error={errors.latitude}
-              hint="From Google Maps: right-click the spot, copy."
+              hint={
+                map.apiKey
+                  ? 'Or drag the map below.'
+                  : 'From Google Maps: right-click the spot, copy.'
+              }
             >
               <Input
                 id="lat"
@@ -364,6 +380,23 @@ export function WarehouseTable({ rows }: { rows: WarehouseRow[] }) {
                 placeholder="75.8577"
               />
             </Field>
+
+            {map.apiKey && (
+              <div className="flex flex-col gap-1.5 sm:col-span-2">
+                <PinPicker
+                  apiKey={map.apiKey}
+                  value={pickerValue(form.latitude, form.longitude)}
+                  fallback={map}
+                  onChange={(latitude, longitude) =>
+                    setForm((c) => ({ ...c, latitude, longitude }))
+                  }
+                />
+                <span className="text-muted-foreground text-xs">
+                  Move the map until the pin sits on the gate trucks load at — distance pricing is
+                  measured from here.
+                </span>
+              </div>
+            )}
           </div>
 
           <label className="flex items-center justify-between gap-4">

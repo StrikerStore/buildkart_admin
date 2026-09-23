@@ -134,9 +134,12 @@ export function LocationForm({
                       {/* Said plainly because it looks like a secret and is not:
                           somebody will otherwise try to hide it and wonder why
                           the map stops loading. */}
-                      Shown in full because it has to be — a map key travels in the
-                      page. Restrict it to your storefront domain at{' '}
-                      {MAP_PROVIDER_LABELS[form.provider]} instead.
+                      Shown in full because it has to be — a map key travels in the page. Restrict
+                      it to your storefront and admin domains at{' '}
+                      {MAP_PROVIDER_LABELS[form.provider]} instead
+                      {form.provider === 'GOOGLE' &&
+                        ', with only the Maps JavaScript and Maps Embed APIs allowed'}
+                      .
                     </span>
                   )}
                 </div>
@@ -178,7 +181,9 @@ export function LocationForm({
                       ? 'Will be removed when you save.'
                       : form.serverGeocodeKey.configured
                         ? 'Leave blank to keep what is stored.'
-                        : 'Used server-side to turn a pin into an address. This one is a real secret and is encrypted.'}
+                        : form.provider === 'GOOGLE'
+                          ? 'Used server-side to turn a pin into an address and to power area search — allow the Geocoding and Places (New) APIs on it. A real secret, stored encrypted.'
+                          : 'Used server-side to turn a pin into an address. This one is a real secret and is encrypted.'}
                   </span>
                 </div>
 

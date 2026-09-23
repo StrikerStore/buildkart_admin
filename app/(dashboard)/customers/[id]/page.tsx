@@ -16,6 +16,8 @@ import { CustomerDetailForm } from '@/components/customers/CustomerDetailForm';
 import { WalletAdjustDialog } from '@/components/customers/WalletAdjustDialog';
 import { getCurrentAdmin, requireAdmin } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
+import { adminMap } from '@/lib/maps';
+import { PinEmbed } from '@/components/maps/PinEmbed';
 
 export async function generateMetadata({
   params,
@@ -50,10 +52,11 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   const { id } = await params;
 
   const client = await api();
-  const [customer, wallet, admin] = await Promise.all([
+  const [customer, wallet, admin, map] = await Promise.all([
     client.orders.customerDetail.query({ id }),
     client.orders.customerWallet.query({ customerId: id, limit: 25 }),
     getCurrentAdmin(),
+    adminMap(),
   ]);
   if (!customer) notFound();
   const canAdjustWallet = admin ? can(admin.role, 'wallet:write') : false;
@@ -235,6 +238,24 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
                     <span className="text-muted-foreground text-xs">
                       {saved.city}, {saved.state} {saved.pincode}
                     </span>
+                    {/* Collapsed: a customer with five addresses should not
+                        load five maps to show a phone number. The iframe is
+                        lazy, so a closed one never loads. */}
+                    {saved.latitude && saved.longitude && (
+                      <details className="mt-1">
+                        <summary className="text-muted-foreground cursor-pointer text-xs hover:underline">
+                          Show pin
+                        </summary>
+                        <div className="mt-2">
+                          <PinEmbed
+                            apiKey={map.apiKey}
+                            lat={Number(saved.latitude)}
+                            lng={Number(saved.longitude)}
+                            title={`Pin for ${saved.line1}`}
+                          />
+                        </div>
+                      </details>
+                    )}
                   </li>
                 ))}
               </ul>
