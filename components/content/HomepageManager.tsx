@@ -399,6 +399,8 @@ export function HomepageManager({
       }
       case 'NEW_ARRIVALS':
         return `Listed in the last ${row.days} day${row.days === 1 ? '' : 's'}, up to ${row.limit}`;
+      case 'TRENDING':
+        return `Most opened from search, last ${row.days} day${row.days === 1 ? '' : 's'}, up to ${row.limit}`;
       case 'CUSTOMER_REVIEWS':
         return `Up to ${row.limit} review${row.limit === 1 ? '' : 's'} from Customer reviews`;
       case 'TRUST_STRIP':
@@ -656,6 +658,29 @@ export function HomepageManager({
             </div>
           )}
 
+          {form.type === 'TRENDING' && (
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="s-trend-days">Rank search activity from the last</Label>
+              <div className="flex items-center gap-2">
+                <Input
+                  id="s-trend-days"
+                  value={form.days}
+                  onChange={(e) =>
+                    setForm((c) => ({ ...c, days: e.target.value.replace(/\D/g, '') }))
+                  }
+                  inputMode="numeric"
+                  className="tabular w-[100px]"
+                />
+                <span className="text-muted-foreground">days</span>
+              </div>
+              <span className="text-muted-foreground text-xs">
+                Ranked by how many shoppers opened each product from search — the dropdown or the
+                results page — up to 90 days. One shopper counts once per product per day, however
+                often they open it. The section hides itself until there is search activity.
+              </span>
+            </div>
+          )}
+
           {form.type === 'CUSTOMER_REVIEWS' && (
             <p className="text-muted-foreground text-xs">
               Reviews are written and arranged under{' '}
@@ -669,6 +694,7 @@ export function HomepageManager({
 
           {(form.type === 'TAG_CAROUSEL' ||
             form.type === 'NEW_ARRIVALS' ||
+            form.type === 'TRENDING' ||
             form.type === 'RATE_TICKER' ||
             form.type === 'CUSTOMER_REVIEWS') && (
             <div className="flex flex-col gap-1.5">
