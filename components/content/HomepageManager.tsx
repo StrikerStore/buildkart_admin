@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import {
   ChevronDownIcon,
   ChevronUpIcon,
+  GripVerticalIcon,
   LayoutTemplateIcon,
   LoaderCircleIcon,
   PencilIcon,
@@ -13,6 +14,24 @@ import {
   TrashIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import { restrictToParentElement, restrictToVerticalAxis } from '@dnd-kit/modifiers';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import {
   HOMEPAGE_SECTION_HINTS,
   HOMEPAGE_SECTION_LABELS,
@@ -99,6 +118,153 @@ function Picker({
         ))}
       </ul>
     </div>
+  );
+}
+
+/**
+ * The category grid's picker, where the order is the point.
+ *
+ * The storefront draws the grid in exactly the order `categoryIds` is saved
+ * in, so a flat checklist hid the one thing the owner could not see: ticking
+ * appended to the end, and the list never showed where. Chosen categories sit
+ * on top in their saved order and drag to rearrange; the rest wait below, and
+ * ticking one adds it to the end of the grid.
+ */
+function OrderedPicker({
+  title,
+  options,
+  selected,
+  onChange,
+}: {
+  title: string;
+  options: Option[];
+  selected: string[];
+  onChange: (ids: string[]) => void;
+}) {
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+
+  const byId = new Map(options.map((option) => [option.id, option]));
+  // A saved id with no option — a category since deactivated — is left in the
+  // list untouched rather than shown: the storefront already skips it.
+  const chosen = selected.flatMap((id) => {
+    const option = byId.get(id);
+    return option ? [option] : [];
+  });
+  const rest = options.filter((option) => !selected.includes(option.id));
+
+  function onDragEnd(event: DragEndEvent) {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    const from = selected.indexOf(String(active.id));
+    const to = selected.indexOf(String(over.id));
+    if (from === -1 || to === -1) return;
+    onChange(arrayMove(selected, from, to));
+  }
+
+  return (
+    <div className="flex flex-col gap-1.5">
+      <Label>{title}</Label>
+
+      {chosen.length === 0 ? (
+        <p className="text-muted-foreground rounded-md border border-dashed px-3 py-2 text-xs">
+          Tick categories below to add them to the grid.
+        </p>
+      ) : (
+        <>
+          <span className="text-muted-foreground text-xs">
+            Showing, in this order — drag to rearrange.
+          </span>
+          <DndContext
+            sensors={sensors}
+            collisionDetection={closestCenter}
+            modifiers={[restrictToVerticalAxis, restrictToParentElement]}
+            onDragEnd={onDragEnd}
+          >
+            <SortableContext
+              items={chosen.map((option) => option.id)}
+              strategy={verticalListSortingStrategy}
+            >
+              <ol className="flex flex-col divide-y rounded-md border">
+                {chosen.map((option, index) => (
+                  <OrderedRow
+                    key={option.id}
+                    option={option}
+                    position={index + 1}
+                    onRemove={() => onChange(selected.filter((id) => id !== option.id))}
+                  />
+                ))}
+              </ol>
+            </SortableContext>
+          </DndContext>
+        </>
+      )}
+
+      {rest.length > 0 && (
+        <>
+          <span className="text-muted-foreground mt-1 text-xs">Not showing</span>
+          <ul className="max-h-[180px] overflow-y-auto rounded-md border p-1.5">
+            {rest.map((option) => (
+              <li key={option.id}>
+                <label className="hover:bg-muted/50 flex cursor-pointer items-center gap-2 rounded px-1.5 py-1">
+                  <Checkbox
+                    checked={false}
+                    onCheckedChange={() => onChange([...selected, option.id])}
+                  />
+                  <span className="truncate">{option.label}</span>
+                </label>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+    </div>
+  );
+}
+
+function OrderedRow({
+  option,
+  position,
+  onRemove,
+}: {
+  option: Option;
+  position: number;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
+    id: option.id,
+  });
+
+  return (
+    <li
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition }}
+      className={cn(
+        'bg-card flex items-center gap-2 px-1.5 py-1',
+        isDragging && 'relative z-10 shadow-lg',
+      )}
+    >
+      <button
+        type="button"
+        className="text-muted-foreground hover:text-foreground cursor-grab touch-none p-1"
+        aria-label={`Reorder ${option.label}`}
+        {...attributes}
+        {...listeners}
+      >
+        <GripVerticalIcon className="size-4" />
+      </button>
+      <span className="text-muted-foreground tabular w-5 shrink-0 text-center text-xs">
+        {position}
+      </span>
+      <Checkbox
+        checked
+        onCheckedChange={onRemove}
+        aria-label={`Remove ${option.label} from the grid`}
+      />
+      <span className="truncate">{option.label}</span>
+    </li>
   );
 }
 
@@ -374,9 +540,7 @@ export function HomepageManager({
 
           {/* The trust strip is a full-bleed rule between bands and draws no
               heading, so it is not asked for one. */}
-          <div
-            className={cn('grid gap-3 sm:grid-cols-2', form.type === 'TRUST_STRIP' && 'hidden')}
-          >
+          <div className={cn('grid gap-3 sm:grid-cols-2', form.type === 'TRUST_STRIP' && 'hidden')}>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="s-title">Heading</Label>
               <Input
@@ -399,11 +563,11 @@ export function HomepageManager({
           {/* Only the controls the chosen type actually uses are shown, so the
               form never asks for a setting that would be thrown away. */}
           {form.type === 'CATEGORY_GRID' && (
-            <Picker
+            <OrderedPicker
               title="Categories"
               options={categories}
               selected={form.categoryIds}
-              onToggle={(id) => toggle('categoryIds', id)}
+              onChange={(categoryIds) => setForm((c) => ({ ...c, categoryIds }))}
             />
           )}
 
