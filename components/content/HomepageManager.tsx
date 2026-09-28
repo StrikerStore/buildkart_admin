@@ -400,7 +400,7 @@ export function HomepageManager({
       case 'NEW_ARRIVALS':
         return `Listed in the last ${row.days} day${row.days === 1 ? '' : 's'}, up to ${row.limit}`;
       case 'TRENDING':
-        return `Most opened from search, last ${row.days} day${row.days === 1 ? '' : 's'}, up to ${row.limit}`;
+        return `Most interest in the last ${row.days} day${row.days === 1 ? '' : 's'}, up to ${row.limit}`;
       case 'CUSTOMER_REVIEWS':
         return `Up to ${row.limit} review${row.limit === 1 ? '' : 's'} from Customer reviews`;
       case 'TRUST_STRIP':
@@ -660,7 +660,7 @@ export function HomepageManager({
 
           {form.type === 'TRENDING' && (
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="s-trend-days">Rank search activity from the last</Label>
+              <Label htmlFor="s-trend-days">Rank shopper activity from the last</Label>
               <div className="flex items-center gap-2">
                 <Input
                   id="s-trend-days"
@@ -674,9 +674,10 @@ export function HomepageManager({
                 <span className="text-muted-foreground">days</span>
               </div>
               <span className="text-muted-foreground text-xs">
-                Ranked by how many shoppers opened each product from search — the dropdown or the
-                results page — up to 90 days. One shopper counts once per product per day, however
-                often they open it. The section hides itself until there is search activity.
+                Up to 90 days. Each product scores 1 point per shopper who viewed it, +2 if they
+                opened it from search, +3 for adding it to the cart, and +5 per order (cancelled
+                orders don&apos;t count). A shopper counts once per product per day, however often
+                they come back. The section hides itself until there is activity.
               </span>
             </div>
           )}
