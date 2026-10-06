@@ -4,8 +4,14 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckIcon, LoaderCircleIcon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import type { PaymentProviderDto } from '@StrikerStore/contract';
-import { PAYMENT_PROVIDER_FIELDS, hasMode } from '@StrikerStore/contract';
+import type { CheckoutOption, PaymentProviderDto } from '@StrikerStore/contract';
+import {
+  CHECKOUT_OPTION_LABELS,
+  GATEWAY_CAPABILITIES,
+  PAYMENT_PROVIDER_FIELDS,
+  hasMode,
+} from '@StrikerStore/contract';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -48,6 +54,11 @@ export function PaymentProviderForm({
   /** Only what has been typed this session. Never seeded from the server. */
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [clearSecrets, setClearSecrets] = useState<string[]>([]);
+  /** Razorpay and PayU only: which customer-facing options this gateway takes. */
+  const routable = provider.provider === 'RAZORPAY' || provider.provider === 'PAYU';
+  const [checkoutOptions, setCheckoutOptions] = useState<CheckoutOption[]>(
+    provider.checkoutOptions,
+  );
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -67,6 +78,7 @@ export function PaymentProviderForm({
         publicFields,
         secrets,
         clearSecrets,
+        ...(routable ? { checkoutOptions } : {}),
       });
 
       if (!result.ok) {
@@ -235,6 +247,36 @@ export function PaymentProviderForm({
           );
         })}
       </div>
+
+      {routable && (
+        <div className="flex flex-col gap-2">
+          <Label>Takes these at checkout</Label>
+          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
+            {GATEWAY_CAPABILITIES[provider.provider as 'RAZORPAY' | 'PAYU'].map((option) => {
+              const id = `${provider.provider}-opt-${option}`;
+              return (
+                <label key={option} htmlFor={id} className="flex items-center gap-2 text-sm">
+                  <Checkbox
+                    id={id}
+                    checked={checkoutOptions.includes(option)}
+                    onCheckedChange={(checked) =>
+                      setCheckoutOptions((current) =>
+                        checked === true
+                          ? [...current, option]
+                          : current.filter((entry) => entry !== option),
+                      )
+                    }
+                  />
+                  {CHECKOUT_OPTION_LABELS[option].en}
+                </label>
+              );
+            })}
+          </div>
+          <span className="text-muted-foreground text-xs">
+            Untick an option to send it to the next gateway in priority instead.
+          </span>
+        </div>
+      )}
 
       {formError && (
         <p className="rounded-md bg-[var(--critical-bg)] px-3 py-2 text-xs text-[var(--critical-fg)]">

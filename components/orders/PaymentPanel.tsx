@@ -324,8 +324,20 @@ export function PaymentPanel({
               </div>
 
               {entry.reference && (
-                <span className="text-muted-foreground -ml-1 text-xs">
+                <span className="text-muted-foreground -ml-1 flex items-center gap-2 text-xs">
                   <CopyableReference value={entry.reference} />
+                  {/* Straight to the payment in Razorpay's dashboard, for a refund
+                      or a dispute. PayU has no stable per-payment address. */}
+                  {entry.gateway === 'RAZORPAY' && /^pay_/.test(entry.reference) && (
+                    <a
+                      href={`https://dashboard.razorpay.com/app/payments/${encodeURIComponent(entry.reference)}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="text-primary shrink-0 hover:underline"
+                    >
+                      Open in Razorpay
+                    </a>
+                  )}
                 </span>
               )}
               {entry.failureReason && (
