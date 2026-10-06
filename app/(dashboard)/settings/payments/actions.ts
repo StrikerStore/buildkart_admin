@@ -1,7 +1,7 @@
 'use server';
 
 import { revalidatePath } from 'next/cache';
-import type { ActionResult } from '@StrikerStore/contract';
+import type { ActionResult, GatewayHealthDto, PaymentProvider } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 
 /**
@@ -26,4 +26,11 @@ export async function reorderPaymentProviders(input: unknown): Promise<ActionRes
   const result = await (await api()).payments.reorderProviders.mutate(input);
   if (result.ok) revalidatePath('/settings/payments');
   return result;
+}
+
+/** Tests the stored credentials with one harmless call; says why when it fails. */
+export async function testPaymentProvider(
+  provider: PaymentProvider,
+): Promise<ActionResult<GatewayHealthDto>> {
+  return (await api()).payments.testProvider.mutate({ provider });
 }

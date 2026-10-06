@@ -100,6 +100,30 @@ export default async function PaymentsSettingsPage() {
           </section>
         )}
 
+        {settings.recentErrors.length > 0 && (
+          <section className="flex flex-col gap-2 rounded-lg border border-[var(--critical-fg)]/30 bg-[var(--critical-bg)] p-4">
+            <h2 className="text-sm font-semibold text-[var(--critical-fg)]">
+              Checkout could not open a payment
+            </h2>
+            <p className="text-xs text-[var(--critical-fg)]">
+              Customers saw &ldquo;We could not reach the payment gateway&rdquo;. Nothing was charged.
+              The gateway&rsquo;s own words are below — use <span className="font-medium">Test connection</span>{' '}
+              on its card to check a fix.
+            </p>
+            <ul className="flex flex-col gap-1 text-xs">
+              {settings.recentErrors.map((entry) => (
+                <li key={entry.at} className="bg-card flex flex-wrap gap-x-3 rounded-md px-3 py-1.5">
+                  <span className="font-medium">{PAYMENT_PROVIDER_LABELS[entry.gateway]}</span>
+                  <span>{entry.reason}</span>
+                  <span className="text-muted-foreground ml-auto">
+                    {new Date(entry.at).toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' })}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
+
         <PaymentRouting settings={settings} />
 
         {providers.map((provider) => (

@@ -2,16 +2,10 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckIcon, LoaderCircleIcon, XIcon } from 'lucide-react';
+import { CheckIcon, LoaderCircleIcon, PlugZapIcon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import type { CheckoutOption, PaymentProviderDto } from '@StrikerStore/contract';
-import {
-  CHECKOUT_OPTION_LABELS,
-  GATEWAY_CAPABILITIES,
-  PAYMENT_PROVIDER_FIELDS,
-  hasMode,
-} from '@StrikerStore/contract';
-import { Checkbox } from '@/components/ui/checkbox';
+import type { GatewayHealthDto, PaymentProviderDto } from '@StrikerStore/contract';
+import { PAYMENT_PROVIDER_FIELDS, hasMode } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -23,7 +17,10 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { savePaymentProvider } from '@/app/(dashboard)/settings/payments/actions';
+import {
+  savePaymentProvider,
+  testPaymentProvider,
+} from '@/app/(dashboard)/settings/payments/actions';
 import { cn } from '@/lib/utils';
 
 /**
@@ -54,11 +51,21 @@ export function PaymentProviderForm({
   /** Only what has been typed this session. Never seeded from the server. */
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [clearSecrets, setClearSecrets] = useState<string[]>([]);
-  /** Razorpay and PayU only: which customer-facing options this gateway takes. */
-  const routable = provider.provider === 'RAZORPAY' || provider.provider === 'PAYU';
-  const [checkoutOptions, setCheckoutOptions] = useState<CheckoutOption[]>(
-    provider.checkoutOptions,
+  const testable = provider.provider === 'RAZORPAY' || provider.provider === 'PAYU';
+  const [health, setHealth] = useState<GatewayHealthDto | null>(null);
+  const [isTesting, startTesting] = useTransition();
+
+  const [partial, setPartial] = useState(
+    provider.partialCod ?? { enabled: false, percent: 10, minAdvance: '100.00', minOrderValue: '0.00' },
   );
+
+  function test() {
+    setHealth(null);
+    startTesting(async () => {
+      const result = await testPaymentProvider(provider.provider);
+      setHealth(result.ok ? result.data : { ok: false, message: result.formErrors[0] ?? 'Test failed.' });
+    });
+  }
 
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -78,7 +85,7 @@ export function PaymentProviderForm({
         publicFields,
         secrets,
         clearSecrets,
-        ...(routable ? { checkoutOptions } : {}),
+        ...(provider.provider === 'COD' ? { partialCod: partial } : {}),
       });
 
       if (!result.ok) {
@@ -248,34 +255,69 @@ export function PaymentProviderForm({
         })}
       </div>
 
-      {routable && (
-        <div className="flex flex-col gap-2">
-          <Label>Takes these at checkout</Label>
-          <div className="grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-4">
-            {GATEWAY_CAPABILITIES[provider.provider as 'RAZORPAY' | 'PAYU'].map((option) => {
-              const id = `${provider.provider}-opt-${option}`;
-              return (
-                <label key={option} htmlFor={id} className="flex items-center gap-2 text-sm">
-                  <Checkbox
-                    id={id}
-                    checked={checkoutOptions.includes(option)}
-                    onCheckedChange={(checked) =>
-                      setCheckoutOptions((current) =>
-                        checked === true
-                          ? [...current, option]
-                          : current.filter((entry) => entry !== option),
-                      )
-                    }
-                  />
-                  {CHECKOUT_OPTION_LABELS[option].en}
-                </label>
-              );
-            })}
+      {provider.provider === 'COD' && (
+        <div className="flex flex-col gap-3 rounded-md border p-3">
+          <div className="flex items-start justify-between gap-4">
+            <div className="flex flex-col gap-0.5">
+              <Label htmlFor="cod-partial">Partial cash on delivery</Label>
+              <span className="text-muted-foreground text-xs">
+                The customer pays an advance online (through your top gateway) and the rest at the
+                door. Works even with full COD switched off, and ignores the &ldquo;refuse above&rdquo;
+                ceiling — big orders are what it is for.
+              </span>
+            </div>
+            <Switch
+              id="cod-partial"
+              checked={partial.enabled}
+              onCheckedChange={(enabled) => setPartial((c) => ({ ...c, enabled }))}
+              className="mt-1 shrink-0"
+            />
           </div>
-          <span className="text-muted-foreground text-xs">
-            Untick an option to send it to the next gateway in priority instead.
-          </span>
+          {partial.enabled && (
+            <div className="grid gap-3 sm:grid-cols-3">
+              <Field label="Advance %" htmlFor="cod-pct" error={errors['partialCod.percent']} hint="Of the amount to pay, rounded up to the rupee.">
+                <Input
+                  id="cod-pct"
+                  inputMode="numeric"
+                  value={String(partial.percent)}
+                  onChange={(e) => setPartial((c) => ({ ...c, percent: Number(e.target.value.replace(/\D/g, '')) || 0 }))}
+                  className="tabular"
+                />
+              </Field>
+              <Field label="Minimum advance" htmlFor="cod-min-adv" error={errors['partialCod.minAdvance']} hint="Never less than this.">
+                <Input
+                  id="cod-min-adv"
+                  inputMode="decimal"
+                  value={partial.minAdvance}
+                  onChange={(e) => setPartial((c) => ({ ...c, minAdvance: e.target.value }))}
+                  className="tabular"
+                />
+              </Field>
+              <Field label="Orders from" htmlFor="cod-min-order" error={errors['partialCod.minOrderValue']} hint="Zero offers it on every order.">
+                <Input
+                  id="cod-min-order"
+                  inputMode="decimal"
+                  value={partial.minOrderValue}
+                  onChange={(e) => setPartial((c) => ({ ...c, minOrderValue: e.target.value }))}
+                  className="tabular"
+                />
+              </Field>
+            </div>
+          )}
         </div>
+      )}
+
+      {health && (
+        <p
+          className={cn(
+            'rounded-md px-3 py-2 text-xs',
+            health.ok
+              ? 'bg-[var(--success-bg)] text-[var(--success-fg)]'
+              : 'bg-[var(--critical-bg)] text-[var(--critical-fg)]',
+          )}
+        >
+          {health.message}
+        </p>
       )}
 
       {formError && (
@@ -284,14 +326,23 @@ export function PaymentProviderForm({
         </p>
       )}
 
-      <Button type="button" className="self-start" disabled={isSaving} onClick={save}>
-        {isSaving ? (
-          <LoaderCircleIcon className="size-4 animate-spin" />
-        ) : (
-          <CheckIcon className="size-4" />
+      <div className="flex flex-wrap gap-2">
+        <Button type="button" disabled={isSaving} onClick={save}>
+          {isSaving ? (
+            <LoaderCircleIcon className="size-4 animate-spin" />
+          ) : (
+            <CheckIcon className="size-4" />
+          )}
+          Save {provider.label}
+        </Button>
+        {/* Tests what is *stored* — save first after changing a key. */}
+        {testable && (
+          <Button type="button" variant="outline" disabled={isTesting} onClick={test}>
+            {isTesting ? <LoaderCircleIcon className="size-4 animate-spin" /> : <PlugZapIcon className="size-4" />}
+            Test connection
+          </Button>
         )}
-        Save {provider.label}
-      </Button>
+      </div>
     </section>
   );
 }

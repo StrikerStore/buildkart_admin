@@ -5,19 +5,19 @@ import { useRouter } from 'next/navigation';
 import { ArrowDownIcon, ArrowUpIcon, CopyIcon, LoaderCircleIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import type { PaymentProvider, PaymentSettingsDto } from '@StrikerStore/contract';
-import { CHECKOUT_OPTION_LABELS, PAYMENT_PROVIDER_LABELS } from '@StrikerStore/contract';
+import { PAYMENT_PROVIDER_LABELS } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { reorderPaymentProviders } from '@/app/(dashboard)/settings/payments/actions';
 
 const ONLINE: PaymentProvider[] = ['RAZORPAY', 'PAYU'];
 
 /**
- * Which gateway takes each way of paying.
+ * Which gateway takes the money.
  *
- * The customer picks "UPI" or "Debit card" at checkout and never sees a
- * gateway's name. This card is where the owner decides who gets each one: the
- * gateways in priority order, and — computed by the same function checkout
- * uses — what that order means for every option right now.
+ * "Pay ₹X" opens the top switched-on gateway, and the customer chooses UPI, a
+ * card or anything else inside its own window. If that gateway will not open a
+ * payment, the next one down takes over — so the order here is the whole of
+ * the routing.
  */
 export function PaymentRouting({ settings }: { settings: PaymentSettingsDto }) {
   const router = useRouter();
@@ -57,8 +57,8 @@ export function PaymentRouting({ settings }: { settings: PaymentSettingsDto }) {
       <div className="flex flex-col gap-0.5">
         <h2 className="font-semibold">Gateway priority</h2>
         <p className="text-muted-foreground text-xs">
-          Customers choose UPI, a card, net banking and so on — never a gateway. The highest
-          gateway that takes an option handles it; if its API fails, the next one takes over.
+          &ldquo;Pay&rdquo; at checkout opens the top gateway that is switched on; the customer picks UPI,
+          a card or anything else inside it. If it fails to open, the next one takes over.
         </p>
       </div>
 
@@ -99,28 +99,6 @@ export function PaymentRouting({ settings }: { settings: PaymentSettingsDto }) {
           </li>
         ))}
       </ol>
-
-      <div className="flex flex-col gap-1.5">
-        <h3 className="text-sm font-medium">What checkout does right now</h3>
-        <dl className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-1 text-xs">
-          {settings.routing.map((route) => (
-            <div key={route.option} className="contents">
-              <dt className="text-muted-foreground">{CHECKOUT_OPTION_LABELS[route.option].en}</dt>
-              <dd>
-                {route.gateways.length === 0 ? (
-                  <span className="text-muted-foreground">Not offered</span>
-                ) : (
-                  route.gateways
-                    .map((gateway, i) =>
-                      i === 0 ? PAYMENT_PROVIDER_LABELS[gateway] : `then ${PAYMENT_PROVIDER_LABELS[gateway]}`,
-                    )
-                    .join(', ')
-                )}
-              </dd>
-            </div>
-          ))}
-        </dl>
-      </div>
 
       <div className="flex flex-col gap-1.5">
         <h3 className="text-sm font-medium">Webhooks</h3>
