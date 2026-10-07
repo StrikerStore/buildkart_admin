@@ -25,6 +25,8 @@ import {
   PAYMENT_METHOD_LABELS,
   type PaymentGateway,
   type PaymentMethod,
+  isValidIndianMobile,
+  normalizeIndianMobile,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -134,8 +136,10 @@ export function NewOrderForm() {
    * the name was spelled differently this time.
    */
   useEffect(() => {
-    const digits = phone.replace(/\D/g, '').slice(-10);
-    if (!/^[6-9]\d{9}$/.test(digits)) {
+    // The same reading the server gives the number, so a lookup and the order
+    // it leads to always agree on who the customer is.
+    const digits = normalizeIndianMobile(phone);
+    if (!isValidIndianMobile(digits)) {
       setKnown(null);
       return;
     }
