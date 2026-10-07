@@ -34,6 +34,8 @@ import {
   type PaymentStatus,
   type PaymentTransactionStatus,
   type PaymentTransactionType,
+  toStoreInputValue,
+  parseStoreDateTime,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,9 +65,8 @@ import { cn } from '@/lib/utils';
 
 /** Renders the current instant as the `YYYY-MM-DDTHH:mm` a datetime-local wants. */
 function nowForInput(): string {
-  const now = new Date();
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}T${pad(now.getHours())}:${pad(now.getMinutes())}`;
+  // Store time, so "now" reads the same on a laptop set to any zone.
+  return toStoreInputValue(new Date());
 }
 
 const STATUS_TONES: Record<PaymentTransactionStatus, string> = {
@@ -199,7 +200,7 @@ export function PaymentPanel({
         gatewayOrderId: form.gatewayOrderId,
         failureReason: form.failureReason,
         note: form.note,
-        occurredAt: new Date(form.occurredAt).toISOString(),
+        occurredAt: parseStoreDateTime(form.occurredAt).toISOString(),
       });
 
       if (!result.ok) {

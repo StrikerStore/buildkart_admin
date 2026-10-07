@@ -14,6 +14,8 @@ import {
   validateTierLadder,
   type BulkTierBasis,
   type PriceTierDraft,
+  storeDayKey,
+  STORE_TIME_ZONE,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -82,15 +84,10 @@ function mrpBelowPrice(value: { price: string; compareAtPrice: string }): boolea
   return toPaise(value.compareAtPrice) <= toPaise(value.price);
 }
 
+/** Whether a rate was changed on today's store (IST) date. */
 function isToday(iso: string | null): boolean {
   if (!iso) return false;
-  const then = new Date(iso);
-  const now = new Date();
-  return (
-    then.getFullYear() === now.getFullYear() &&
-    then.getMonth() === now.getMonth() &&
-    then.getDate() === now.getDate()
-  );
+  return storeDayKey(new Date(iso)) === storeDayKey(new Date());
 }
 
 /**
@@ -527,6 +524,7 @@ export function RatesTable({ rows }: { rows: RateRow[] }) {
                         ? new Date(row.priceUpdatedAt).toLocaleDateString('en-GB', {
                             day: 'numeric',
                             month: 'short',
+                            timeZone: STORE_TIME_ZONE,
                           })
                         : 'Never'}
                     </span>

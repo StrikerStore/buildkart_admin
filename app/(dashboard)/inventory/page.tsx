@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { PackageIcon } from 'lucide-react';
+import { STORE_TIME_ZONE } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { InventoryTable } from '@/components/inventory/InventoryTable';
@@ -109,6 +110,7 @@ export default async function InventoryPage({
                     {new Date(entry.createdAt).toLocaleDateString('en-GB', {
                       day: 'numeric',
                       month: 'short',
+                      timeZone: STORE_TIME_ZONE,
                     })}
                   </span>
                 </li>

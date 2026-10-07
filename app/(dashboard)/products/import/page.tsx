@@ -1,5 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
+import { formatStoreDateTime } from '@StrikerStore/contract';
 
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { ImportUploader } from '@/components/imports/ImportUploader';
@@ -52,7 +53,7 @@ export default async function ImportPage() {
                     <span className="min-w-0 flex-1">
                       <span className="block truncate font-medium">{job.filename}</span>
                       <span className="text-muted-foreground block text-xs">
-                        {new Date(job.createdAt).toLocaleString('en-GB')}
+                        {formatStoreDateTime(job.createdAt)}
                       </span>
                     </span>
 

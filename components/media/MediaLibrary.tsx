@@ -17,7 +17,7 @@ import {
   XIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { buildMediaUrl, ADMIN_THUMB_2X, ADMIN_PREVIEW, type MediaSortKey } from '@StrikerStore/contract';
+import { buildMediaUrl, ADMIN_THUMB_2X, ADMIN_PREVIEW, type MediaSortKey, STORE_TIME_ZONE } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -45,9 +45,18 @@ function formatBytes(bytes: number): string {
 /** "20 Aug at 4:25 am" — the compact form Shopify uses in this table. */
 function formatDate(iso: string): string {
   const date = new Date(iso);
-  const day = date.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  const day = date.toLocaleDateString('en-GB', {
+    day: 'numeric',
+    month: 'short',
+    timeZone: STORE_TIME_ZONE,
+  });
   const time = date
-    .toLocaleTimeString('en-GB', { hour: 'numeric', minute: '2-digit', hour12: true })
+    .toLocaleTimeString('en-GB', {
+      hour: 'numeric',
+      minute: '2-digit',
+      hour12: true,
+      timeZone: STORE_TIME_ZONE,
+    })
     .toLowerCase();
   return `${day} at ${time}`;
 }

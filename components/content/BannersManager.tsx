@@ -22,6 +22,7 @@ import {
   BANNER_PLACEMENT_LABELS,
   BANNER_PLACEMENT_SIZES,
   type BannerPlacement,
+  toStoreInputValue,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -57,10 +58,8 @@ import { cn } from '@/lib/utils';
 import type { BannerDto } from '@StrikerStore/contract';
 
 function toLocalInput(iso: string | null): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  // Store time, not the browser's: the server reads the value back as IST.
+  return toStoreInputValue(iso);
 }
 
 const EMPTY = {

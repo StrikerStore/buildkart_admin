@@ -17,6 +17,7 @@ import {
   type DiscountState,
   type DiscountTrigger,
   type DiscountType,
+  toStoreInputValue,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -78,10 +79,8 @@ const STATE_TONES: Record<DiscountState, string> = {
 
 /** Renders a Date as the `YYYY-MM-DDTHH:mm` a datetime-local input expects. */
 function toLocalInput(iso: string | null): string {
-  if (!iso) return '';
-  const date = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, '0');
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
+  // Store time, not the browser's: the server reads the value back as IST.
+  return toStoreInputValue(iso);
 }
 
 const EMPTY = {
