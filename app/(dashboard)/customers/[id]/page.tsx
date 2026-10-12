@@ -275,6 +275,8 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               locale={customer.locale === 'hi' ? 'hi' : 'en'}
               notes={customer.notes}
               isBlocked={customer.isBlocked}
+              whatsappOptIn={customer.whatsappOptIn}
+              whatsappOptOutAt={customer.whatsappOptOutAt}
             />
           </Card>
         </div>

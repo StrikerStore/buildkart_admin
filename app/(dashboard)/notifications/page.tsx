@@ -3,6 +3,7 @@ import { NOTIFICATION_CHANNELS, type NotificationChannel } from '@StrikerStore/c
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { EventMatrix } from '@/components/notifications/EventMatrix';
+import { MessageLog } from '@/components/notifications/MessageLog';
 import { ProviderForms } from '@/components/notifications/ProviderForms';
 import { requirePermission } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
@@ -12,9 +13,11 @@ export const metadata: Metadata = { title: 'Customer messages' };
 export default async function NotificationsPage() {
   await requirePermission('settings:write');
 
-  const { templates, providers, activeWithoutProvider } = await (
-    await api()
-  ).notifications.page.query();
+  const client = await api();
+  const [{ templates, providers, activeWithoutProvider }, log] = await Promise.all([
+    client.notifications.page.query(),
+    client.notifications.messages.query({ limit: 100 }),
+  ]);
 
   const enabledChannels = NOTIFICATION_CHANNELS.filter((channel) =>
     channel === 'SMS'
@@ -25,6 +28,10 @@ export default async function NotificationsPage() {
   ) as NotificationChannel[];
 
   const live = templates.filter((template) => template.isActive).length;
+  const liveWhatsapp = templates.filter(
+    (template) => template.isActive && template.channel === 'WHATSAPP',
+  ).length;
+  const whatsappSending = providers.whatsapp.enabled && providers.whatsapp.provider === 'AISENSY';
 
   return (
     <PageContainer>
@@ -35,17 +42,17 @@ export default async function NotificationsPage() {
 
       <div className="flex flex-col gap-4">
         {/*
-          Said once, at the top, and repeated on the providers tab. Someone
-          writing twelve messages should know before the first one that nothing
-          is being sent yet — not discover it afterwards.
+          Said once, at the top. Someone writing twelve messages should know
+          before the first one which of them will actually reach a phone.
         */}
         <p className="text-muted-foreground rounded-md border px-3 py-2 text-xs">
-          Nothing is sent yet. These are written and stored now so the wording and
-          the DLT registrations are settled before a provider is connected —
-          {' '}
+          {whatsappSending
+            ? `WhatsApp is live through AiSensy: ${liveWhatsapp} message${liveWhatsapp === 1 ? ' is' : 's are'} switched on, and each sends once WhatsApp has approved its template.`
+            : 'WhatsApp is not switched on, so nothing is sent yet.'}{' '}
+          SMS and email are stored but not sent.{' '}
           {live === 0
-            ? 'none are switched on.'
-            : `${live} ${live === 1 ? 'is' : 'are'} switched on and ready.`}
+            ? 'No messages are switched on.'
+            : `${live} ${live === 1 ? 'is' : 'are'} switched on in total.`}
         </p>
 
         {activeWithoutProvider > 0 && (
@@ -60,6 +67,7 @@ export default async function NotificationsPage() {
           <TabsList>
             <TabsTrigger value="messages">Messages</TabsTrigger>
             <TabsTrigger value="providers">Providers</TabsTrigger>
+            <TabsTrigger value="log">Sent</TabsTrigger>
           </TabsList>
 
           <TabsContent value="messages">
@@ -67,6 +75,9 @@ export default async function NotificationsPage() {
           </TabsContent>
           <TabsContent value="providers">
             <ProviderForms providers={providers} />
+          </TabsContent>
+          <TabsContent value="log">
+            <MessageLog messages={log.messages} />
           </TabsContent>
         </Tabs>
       </div>

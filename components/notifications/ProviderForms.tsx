@@ -2,11 +2,12 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckIcon, LoaderCircleIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
+import { CheckIcon, CopyIcon, LoaderCircleIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   EMAIL_PROVIDERS,
   PROVIDER_LABELS,
+  SENDING_WHATSAPP_PROVIDERS,
   SMS_PROVIDERS,
   WHATSAPP_PROVIDERS,
   type NotificationProvidersDto,
@@ -30,7 +31,7 @@ import {
 } from '@/app/(dashboard)/notifications/actions';
 
 /**
- * Where the messages would go out from.
+ * Where the messages go out from.
  *
  * The secret handling is the payment screen's, unchanged: a secret input always
  * renders empty, blank means keep what is stored, and the placeholder carries
@@ -58,8 +59,8 @@ export function ProviderForms({ providers }: { providers: NotificationProvidersD
       <p className="text-muted-foreground text-xs">
         {/* Said once, plainly: the alternative is somebody entering live
             credentials and waiting for a message that never comes. */}
-        Nothing is sent yet, whatever is switched on here. Connecting a provider to
-        the order flow is the next piece of work.
+        WhatsApp sends through AiSensy once it is switched on here and a message is
+        switched on with an approved template. SMS and email are stored but not sent yet.
       </p>
     </div>
   );
@@ -293,16 +294,21 @@ function WhatsappForm({
   data: NotificationProvidersDto['whatsapp'];
   keyed: boolean;
 }) {
-  const { form, set, error, isSaving, submit } = useProviderForm(
+  const { form, set, errors, error, isSaving, submit } = useProviderForm(
     {
       enabled: data.enabled,
       provider: data.provider,
       phoneNumberId: data.phoneNumberId,
+      projectId: data.projectId,
       apiToken: '',
       clearApiToken: false,
+      webhookSecret: '',
+      clearWebhookSecret: false,
     },
     saveWhatsappProvider,
   );
+  const isAisensy = form.provider === 'AISENSY';
+  const sends = SENDING_WHATSAPP_PROVIDERS.includes(form.provider as never);
 
   return (
     <Card
@@ -310,7 +316,9 @@ function WhatsappForm({
       subtitle="Where most Indian customers actually read things."
       enabled={form.enabled}
       onEnabled={(v) => set('enabled', v)}
-      onSave={() => submit({ apiToken: '', clearApiToken: false })}
+      onSave={() =>
+        submit({ apiToken: '', clearApiToken: false, webhookSecret: '', clearWebhookSecret: false })
+      }
       isSaving={isSaving}
       error={error}
     >
@@ -329,29 +337,100 @@ function WhatsappForm({
               ))}
             </SelectContent>
           </Select>
+          {!sends && (
+            <span className="text-xs text-[var(--warning-fg)]">
+              Saved, but this build only sends through AiSensy.
+            </span>
+          )}
         </div>
 
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="phoneNumberId">Phone number id</Label>
-          <Input
-            id="phoneNumberId"
-            value={form.phoneNumberId}
-            onChange={(e) => set('phoneNumberId', e.target.value)}
-            className="font-mono"
-          />
-        </div>
+        {isAisensy ? (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="projectId">Project id</Label>
+            <Input
+              id="projectId"
+              value={form.projectId}
+              onChange={(e) => set('projectId', e.target.value)}
+              className="font-mono"
+              placeholder="6245d025fcb7966c46294618"
+            />
+            {errors.projectId ? (
+              <span className="text-xs text-[var(--critical-fg)]">{errors.projectId}</span>
+            ) : (
+              <span className="text-muted-foreground text-xs">From your AiSensy dashboard.</span>
+            )}
+          </div>
+        ) : (
+          <div className="flex flex-col gap-1.5">
+            <Label htmlFor="phoneNumberId">Phone number id</Label>
+            <Input
+              id="phoneNumberId"
+              value={form.phoneNumberId}
+              onChange={(e) => set('phoneNumberId', e.target.value)}
+              className="font-mono"
+            />
+          </div>
+        )}
 
         <SecretInput
           id="waToken"
-          label="API token"
+          label={isAisensy ? 'Custom App password' : 'API token'}
           stored={data.apiToken}
           value={form.apiToken}
           clearing={form.clearApiToken}
           disabled={!keyed}
           onValue={(v) => set('apiToken', v)}
           onClear={() => set('clearApiToken', !form.clearApiToken)}
+          hint={isAisensy ? 'AiSensy → Custom Apps: the password, not the key.' : undefined}
         />
+
+        {isAisensy && (
+          <SecretInput
+            id="waWebhookSecret"
+            label="Webhook shared secret"
+            stored={data.webhookSecret}
+            value={form.webhookSecret}
+            clearing={form.clearWebhookSecret}
+            disabled={!keyed}
+            onValue={(v) => set('webhookSecret', v)}
+            onClear={() => set('clearWebhookSecret', !form.clearWebhookSecret)}
+            hint="Same Custom App. Without it, delivery reports and STOP replies are refused."
+          />
+        )}
       </div>
+
+      {isAisensy && (
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="waWebhookUrl">Webhook URL</Label>
+          {data.webhookUrl ? (
+            <div className="flex items-center gap-2">
+              <Input id="waWebhookUrl" readOnly value={data.webhookUrl} className="font-mono" />
+              <Button
+                type="button"
+                variant="outline"
+                size="sm"
+                className="shrink-0"
+                onClick={() => {
+                  void navigator.clipboard.writeText(data.webhookUrl);
+                  toast.success('Copied');
+                }}
+              >
+                <CopyIcon className="size-4" />
+                Copy
+              </Button>
+            </div>
+          ) : (
+            <span className="text-xs text-[var(--warning-fg)]">
+              Set <code className="font-mono">API_PUBLIC_URL</code> on the API server to see the address.
+            </span>
+          )}
+          <span className="text-muted-foreground text-xs">
+            Add it as a webhook on the Custom App, subscribed to{' '}
+            <code className="font-mono">message.status.updated</code> and{' '}
+            <code className="font-mono">message.sender.user</code>.
+          </span>
+        </div>
+      )}
     </Card>
   );
 }

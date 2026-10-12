@@ -405,6 +405,8 @@ export function HomepageManager({
         return `Up to ${row.limit} review${row.limit === 1 ? '' : 's'} from Customer reviews`;
       case 'TRUST_STRIP':
         return row.markers.map((marker) => TRUST_MARKER_LABELS[marker]).join(' · ');
+      case 'RECENTLY_VIEWED':
+        return "Each shopper's own history";
       default:
         return HOMEPAGE_SECTION_HINTS[row.type];
     }
@@ -549,7 +551,7 @@ export function HomepageManager({
                 id="s-title"
                 value={form.titleEn}
                 onChange={(e) => setForm((c) => ({ ...c, titleEn: e.target.value }))}
-                placeholder="Shop by category"
+                placeholder={form.type === 'RECENTLY_VIEWED' ? 'Recently viewed' : 'Shop by category'}
               />
             </div>
             <div className="flex flex-col gap-1.5">
@@ -690,6 +692,15 @@ export function HomepageManager({
               </Link>
               . This section shows the first ones in that order and hides itself while none are
               showing.
+            </p>
+          )}
+
+          {form.type === 'RECENTLY_VIEWED' && (
+            <p className="text-muted-foreground text-xs">
+              Nothing to choose: every shopper sees the products they last opened, up to 12, with
+              today&apos;s prices. Leave the heading blank to use &ldquo;Recently viewed&rdquo; /
+              &ldquo;हाल में देखे गए&rdquo;. Move this section up or down the list to change where
+              the rail sits on the homepage.
             </p>
           )}
 

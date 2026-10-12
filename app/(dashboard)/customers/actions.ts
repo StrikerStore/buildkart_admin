@@ -22,6 +22,12 @@ export async function adjustWallet(input: unknown): Promise<ActionResult<{ balan
   return result;
 }
 
+export async function setCustomerWhatsappOptIn(input: unknown): Promise<ActionResult<void>> {
+  const result = await (await api()).orders.setCustomerWhatsappOptIn.mutate(input);
+  if (result.ok) revalidatePath('/customers');
+  return result;
+}
+
 export async function setCustomerBlocked(input: unknown): Promise<ActionResult<void>> {
   const result = await (await api()).orders.setCustomerBlocked.mutate(input);
   if (result.ok) revalidateCustomer(input);

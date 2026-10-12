@@ -17,6 +17,7 @@ import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { OrderActionBar } from '@/components/orders/OrderActionBar';
 import { OrderNoteEditor } from '@/components/orders/OrderSideControls';
 import { PaymentPanel } from '@/components/orders/PaymentPanel';
+import { MessageLog } from '@/components/notifications/MessageLog';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 import { api, serverConfig } from '@/lib/api/server';
 import { adminMap } from '@/lib/maps';
@@ -66,7 +67,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   await requireAdmin();
   const { id } = await params;
 
-  const [order, map] = await Promise.all([(await api()).orders.detail.query({ id }), adminMap()]);
+  const client = await api();
+  const [order, map, messages] = await Promise.all([
+    client.orders.detail.query({ id }),
+    adminMap(),
+    client.notifications.messages.query({ orderId: id, limit: 20 }),
+  ]);
   if (!order) notFound();
 
   const { publicBaseUrl, transformsEnabled } = (await serverConfig()).media;
@@ -231,6 +237,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           <Card title="Timeline">
             <OrderTimeline status={order.status} events={order.events} />
           </Card>
+
+          {messages.messages.length > 0 && (
+            <Card title="WhatsApp messages">
+              <MessageLog messages={messages.messages} showOrderLink={false} />
+            </Card>
+          )}
         </div>
 
         <div className="flex flex-col gap-4">

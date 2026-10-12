@@ -23,7 +23,13 @@ import {
   DialogHeader,
   DialogTitle,
 } from '@/components/ui/dialog';
-import { setCustomerBlocked, updateCustomer } from '@/app/(dashboard)/customers/actions';
+import {
+  setCustomerBlocked,
+  setCustomerWhatsappOptIn,
+  updateCustomer,
+} from '@/app/(dashboard)/customers/actions';
+import { Switch } from '@/components/ui/switch';
+import { formatStoreDate } from '@StrikerStore/contract';
 
 export function CustomerDetailForm({
   customerId,
@@ -33,6 +39,8 @@ export function CustomerDetailForm({
   locale,
   notes,
   isBlocked,
+  whatsappOptIn,
+  whatsappOptOutAt,
 }: {
   customerId: string;
   phone: string;
@@ -41,6 +49,8 @@ export function CustomerDetailForm({
   locale: 'en' | 'hi';
   notes: string | null;
   isBlocked: boolean;
+  whatsappOptIn: boolean;
+  whatsappOptOutAt: string | null;
 }) {
   const router = useRouter();
   const [form, setForm] = useState({
@@ -63,6 +73,18 @@ export function CustomerDetailForm({
         return;
       }
       toast.success('Saved');
+      router.refresh();
+    });
+  }
+
+  function toggleWhatsapp(next: boolean) {
+    startSaving(async () => {
+      const result = await setCustomerWhatsappOptIn({ customerId, optIn: next });
+      if (!result.ok) {
+        toast.error(result.formErrors[0] ?? 'Could not update that.');
+        return;
+      }
+      toast.success(next ? 'WhatsApp updates on' : 'WhatsApp updates off');
       router.refresh();
     });
   }
@@ -147,6 +169,25 @@ export function CustomerDetailForm({
           )}
           Save details
         </Button>
+
+        <label className="flex items-start justify-between gap-4 border-t pt-3">
+          <span className="flex flex-col gap-0.5">
+            <span className="font-medium">WhatsApp updates</span>
+            <span className="text-muted-foreground text-xs">
+              {whatsappOptIn
+                ? 'Order, payment and delivery messages. Sign-in codes are sent either way.'
+                : whatsappOptOutAt
+                  ? `Turned off on ${formatStoreDate(whatsappOptOutAt)} — by a STOP reply or by hand.`
+                  : 'Turned off.'}
+            </span>
+          </span>
+          <Switch
+            checked={whatsappOptIn}
+            disabled={isSaving}
+            onCheckedChange={toggleWhatsapp}
+            className="mt-0.5 shrink-0"
+          />
+        </label>
 
         <div className="border-t pt-3">
           {isBlocked ? (

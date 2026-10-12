@@ -2,7 +2,7 @@
 
 import { useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckIcon, LoaderCircleIcon, Trash2Icon } from 'lucide-react';
+import { CheckIcon, LoaderCircleIcon, RefreshCwIcon, SendIcon, Trash2Icon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   EVENT_TOKENS,
@@ -13,6 +13,7 @@ import {
   needsProviderTemplateId,
   previewTemplate,
   smsLength,
+  toPositional,
   unknownTokens,
   type NotificationChannel,
   type NotificationEvent,
@@ -32,7 +33,10 @@ import {
 } from '@/components/ui/dialog';
 import {
   deleteNotificationTemplate,
+  refreshWhatsappTemplate,
   saveNotificationTemplate,
+  sendWhatsappTest,
+  submitWhatsappTemplate,
 } from '@/app/(dashboard)/notifications/actions';
 import { cn } from '@/lib/utils';
 
@@ -268,12 +272,22 @@ function Editor({ target, onClose }: { target: EditorTarget; onClose: () => void
             </div>
           )}
 
+          {target.channel === 'WHATSAPP' && (
+            <WhatsappPanel
+              target={target}
+              body={form.body}
+              savedBody={target.existing?.body ?? null}
+              onTemplateName={(name) => setForm((c) => ({ ...c, providerTemplateId: name }))}
+            />
+          )}
+
           <label className="flex items-start justify-between gap-4 border-t pt-3">
             <span className="flex flex-col gap-0.5">
               <span className="font-medium">Send this one</span>
               <span className="text-muted-foreground text-xs">
-                Nothing sends yet — this decides what will, once a provider is
-                connected.
+                {target.channel === 'WHATSAPP'
+                  ? 'Sent through AiSensy while WhatsApp is switched on and the template is approved.'
+                  : 'Nothing sends on this channel yet — this decides what will, once a provider is connected.'}
               </span>
             </span>
             <Switch
@@ -317,5 +331,200 @@ function Editor({ target, onClose }: { target: EditorTarget; onClose: () => void
         </div>
       </DialogContent>
     </Dialog>
+  );
+}
+
+const STATUS_STYLES: Record<string, string> = {
+  APPROVED: 'bg-[var(--success-bg)] text-[var(--success-fg)]',
+  PENDING: 'bg-[var(--warning-bg)] text-[var(--warning-fg)]',
+  REJECTED: 'bg-[var(--critical-bg)] text-[var(--critical-fg)]',
+  EDITED: 'bg-[var(--warning-bg)] text-[var(--warning-fg)]',
+};
+
+const STATUS_WORDS: Record<string, string> = {
+  APPROVED: 'Approved by WhatsApp',
+  PENDING: 'Waiting for WhatsApp approval',
+  REJECTED: 'Rejected by WhatsApp',
+  EDITED: 'Edited since approval — submit again',
+};
+
+/**
+ * WhatsApp's half of a message: the text as Meta sees it, its approval, and a
+ * test send to a real phone.
+ *
+ * Submitting works from the *saved* body — that is what the dispatcher will
+ * build parameters from, so submitting unsaved text would approve something
+ * that is never sent.
+ */
+function WhatsappPanel({
+  target,
+  body,
+  savedBody,
+  onTemplateName,
+}: {
+  target: EditorTarget;
+  body: string;
+  savedBody: string | null;
+  onTemplateName: (name: string) => void;
+}) {
+  const router = useRouter();
+  const [status, setStatus] = useState({
+    providerStatus: target.existing?.providerStatus ?? '',
+    providerRejectedReason: target.existing?.providerRejectedReason ?? '',
+  });
+  const [phone, setPhone] = useState('');
+  const [isSubmitting, startSubmitting] = useTransition();
+  const [isRefreshing, startRefreshing] = useTransition();
+  const [isTesting, startTesting] = useTransition();
+
+  const positional = toPositional(body);
+  const unsaved = savedBody === null || savedBody !== body;
+  const isOtp = target.event === 'customer.otp';
+  const key = { event: target.event, locale: target.locale };
+
+  function submit() {
+    startSubmitting(async () => {
+      const result = await submitWhatsappTemplate(key);
+      if (!result.ok) {
+        toast.error(result.formErrors[0] ?? 'Could not submit that.');
+        return;
+      }
+      setStatus(result.data);
+      onTemplateName(result.data.providerTemplateId);
+      toast.success('Submitted. WhatsApp usually answers within minutes.');
+      router.refresh();
+    });
+  }
+
+  function refresh() {
+    startRefreshing(async () => {
+      const result = await refreshWhatsappTemplate(key);
+      if (!result.ok) {
+        toast.error(result.formErrors[0] ?? 'Could not read the status.');
+        return;
+      }
+      setStatus(result.data);
+      router.refresh();
+    });
+  }
+
+  function test() {
+    startTesting(async () => {
+      const result = await sendWhatsappTest({ ...key, phone });
+      if (!result.ok) {
+        toast.error(result.formErrors[0] ?? 'Could not send the test.');
+        return;
+      }
+      if (result.data.status === 'SENT') toast.success('Sent. Check the phone.');
+      else toast.error(result.data.error ?? `Not sent (${result.data.status.toLowerCase()}).`);
+    });
+  }
+
+  return (
+    <div className="flex flex-col gap-3 rounded-md border p-3">
+      <div className="flex flex-wrap items-center justify-between gap-2">
+        <span className="font-medium">WhatsApp approval</span>
+        {status.providerStatus && (
+          <span
+            className={cn(
+              'rounded px-1.5 py-0.5 text-xs',
+              STATUS_STYLES[status.providerStatus] ?? 'bg-muted',
+            )}
+          >
+            {STATUS_WORDS[status.providerStatus] ?? status.providerStatus}
+          </span>
+        )}
+      </div>
+
+      {status.providerStatus === 'REJECTED' && status.providerRejectedReason && (
+        <p className="text-xs text-[var(--critical-fg)]">{status.providerRejectedReason}</p>
+      )}
+
+      {isOtp ? (
+        <p className="text-muted-foreground text-xs">
+          WhatsApp writes sign-in code messages itself. In AiSensy, create an Authentication
+          template with a copy-code button, and paste its name above once it is approved.
+        </p>
+      ) : (
+        body.trim() !== '' && (
+          <div className="flex flex-col gap-1">
+            <span className="text-muted-foreground text-xs">What WhatsApp reviews:</span>
+            <p className="bg-muted/40 rounded-md px-3 py-2 font-mono text-xs whitespace-pre-wrap">
+              {positional.text}
+            </p>
+            {positional.tokens.length > 0 && (
+              <span className="text-muted-foreground text-xs">
+                {positional.tokens.map((token, i) => `{{${i + 1}}} = ${token}`).join(' · ')}
+              </span>
+            )}
+          </div>
+        )
+      )}
+
+      {!isOtp && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isSubmitting || unsaved || body.trim() === ''}
+            onClick={submit}
+          >
+            {isSubmitting ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              <SendIcon className="size-4" />
+            )}
+            {status.providerStatus ? 'Submit again' : 'Submit for approval'}
+          </Button>
+          {(status.providerStatus === 'PENDING' || status.providerStatus === 'REJECTED') && (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              disabled={isRefreshing}
+              onClick={refresh}
+            >
+              <RefreshCwIcon className={cn('size-4', isRefreshing && 'animate-spin')} />
+              Check status
+            </Button>
+          )}
+          {unsaved && body.trim() !== '' && (
+            <span className="text-muted-foreground text-xs">Save the message first.</span>
+          )}
+        </div>
+      )}
+
+      <div className="flex flex-col gap-1.5 border-t pt-3">
+        <Label htmlFor="waTestPhone">Send a test</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="waTestPhone"
+            inputMode="tel"
+            placeholder="10-digit mobile"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            className="max-w-[200px] font-mono"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            disabled={isTesting || phone.trim().length < 10 || unsaved}
+            onClick={test}
+          >
+            {isTesting ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              <SendIcon className="size-4" />
+            )}
+            Send
+          </Button>
+        </div>
+        <span className="text-muted-foreground text-xs">
+          Filled with the sample values. Needs an approved template name above.
+        </span>
+      </div>
+    </div>
   );
 }
