@@ -33,12 +33,15 @@ import {
 } from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import {
+  CATEGORY_GRID_ALIGNMENTS,
+  CATEGORY_GRID_ALIGNMENT_LABELS,
   HOMEPAGE_SECTION_HINTS,
   HOMEPAGE_SECTION_LABELS,
   HOMEPAGE_SECTION_TYPES,
   TRUST_MARKERS,
   TRUST_MARKER_HINTS,
   TRUST_MARKER_LABELS,
+  type CategoryGridAlignment,
   type HomepageSectionType,
   type TrustMarker,
 } from '@StrikerStore/contract';
@@ -79,6 +82,7 @@ const EMPTY = {
   titleEn: '',
   titleHi: '',
   categoryIds: [] as string[],
+  align: 'left' as CategoryGridAlignment,
   productIds: [] as string[],
   tagSlug: '',
   limit: '12',
@@ -306,6 +310,7 @@ export function HomepageManager({
       titleEn: row.titleEn ?? '',
       titleHi: row.titleHi ?? '',
       categoryIds: row.categoryIds,
+      align: row.align,
       productIds: row.productIds,
       tagSlug: row.tagSlug ?? '',
       limit: String(row.limit),
@@ -351,6 +356,7 @@ export function HomepageManager({
         isActive: form.isActive,
         config: {
           categoryIds: form.categoryIds,
+          align: form.align,
           productIds: form.productIds,
           tagSlug: form.tagSlug === '' ? undefined : form.tagSlug,
           limit: form.limit,
@@ -390,7 +396,7 @@ export function HomepageManager({
   function summarise(row: HomepageSectionDto): string {
     switch (row.type) {
       case 'CATEGORY_GRID':
-        return `${row.categoryIds.length} categor${row.categoryIds.length === 1 ? 'y' : 'ies'}`;
+        return `${row.categoryIds.length} categor${row.categoryIds.length === 1 ? 'y' : 'ies'}, ${CATEGORY_GRID_ALIGNMENT_LABELS[row.align].toLowerCase()} aligned`;
       case 'PRODUCT_CAROUSEL':
         return `${row.productIds.length} product${row.productIds.length === 1 ? '' : 's'}`;
       case 'TAG_CAROUSEL': {
@@ -573,6 +579,33 @@ export function HomepageManager({
               selected={form.categoryIds}
               onChange={(categoryIds) => setForm((c) => ({ ...c, categoryIds }))}
             />
+          )}
+
+          {form.type === 'CATEGORY_GRID' && (
+            <div className="flex flex-col gap-1.5">
+              <Label>Alignment</Label>
+              <Select
+                value={form.align}
+                onValueChange={(value) =>
+                  setForm((c) => ({ ...c, align: value as CategoryGridAlignment }))
+                }
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {CATEGORY_GRID_ALIGNMENTS.map((value) => (
+                    <SelectItem key={value} value={value}>
+                      {CATEGORY_GRID_ALIGNMENT_LABELS[value]}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <span className="text-muted-foreground text-xs">
+                Where the tiles sit on a row they don&apos;t fill — a phone shows 4 per row, a
+                tablet 6, a desktop 8. Full rows look the same either way.
+              </span>
+            </div>
           )}
 
           {form.type === 'PRODUCT_CAROUSEL' && (
