@@ -72,7 +72,17 @@ function NavLink({
       {item.children && sectionActive && (
         <ul className="mt-0.5 mb-1 flex flex-col gap-px pl-[34px]">
           {item.children.map((child) => {
-            const childActive = isActivePath(pathname, child.href);
+            // The most specific match only: on /analytics/acquisition the
+            // "Overview" child (/analytics) also matches by prefix, and two lit
+            // rows would say you are on both pages.
+            const childActive =
+              isActivePath(pathname, child.href) &&
+              !item.children!.some(
+                (other) =>
+                  other.href.length > child.href.length &&
+                  other.href.startsWith(`${child.href}/`) &&
+                  isActivePath(pathname, other.href),
+              );
             return (
               <li key={child.href}>
                 <Link

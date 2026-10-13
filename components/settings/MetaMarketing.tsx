@@ -74,6 +74,9 @@ export function MetaMarketingForm({ data }: { data: MetaMarketingDto }) {
     adAccountId: data.adAccountId,
     insightsToken: '',
     clearInsightsToken: false,
+    domainVerification: data.domainVerification,
+    reportCounterOrders: data.reportCounterOrders,
+    consentBanner: data.consentBanner,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [error, setError] = useState<string | null>(null);
@@ -381,9 +384,88 @@ export function MetaMarketingForm({ data }: { data: MetaMarketingDto }) {
           </Button>
         </div>
       </Section>
+
+      <Section
+        title="Catalog, verification and privacy"
+        subtitle="What Meta needs for catalog ads, and how much of each visit it is told about."
+      >
+        <div className="flex flex-col gap-1.5">
+          <Label>Product catalog feed</Label>
+          <code className="bg-muted w-fit rounded px-2 py-1 font-mono text-xs">
+            https://&lt;your storefront&gt;/feeds/meta.csv
+          </code>
+          <span className="text-muted-foreground text-xs">
+            Commerce Manager → Catalog → Data sources → Data feed → scheduled, daily. Every item&apos;s id
+            is its product handle, the same id the pixel sends, so catalog ads can match views and
+            purchases to products.
+          </span>
+        </div>
+
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="domainVerification">Domain verification code</Label>
+          <Input
+            id="domainVerification"
+            value={form.domainVerification}
+            onChange={(e) => set('domainVerification', e.target.value)}
+            placeholder="abc123xyz789…"
+            className="font-mono"
+            maxLength={200}
+            aria-invalid={Boolean(errors.domainVerification)}
+          />
+          <span className="text-muted-foreground text-xs">
+            {errors.domainVerification ??
+              'Business settings → Brand safety → Domains → Meta-tag verification. Paste the code or the whole tag; it is added to every storefront page.'}
+          </span>
+        </div>
+
+        <label className="flex items-start justify-between gap-4">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Report counter and phone orders</span>
+            <span className="text-muted-foreground text-xs">
+              Sends orders you enter in the admin to Meta as offline conversions (phone call), with
+              the customer&apos;s phone number hashed — so ads that make the phone ring get credit.
+              Needs the Conversions API above.
+            </span>
+          </span>
+          <Switch
+            checked={form.reportCounterOrders}
+            onCheckedChange={(v) => set('reportCounterOrders', v)}
+            className="mt-1 shrink-0"
+          />
+        </label>
+
+        <label className="flex items-start justify-between gap-4">
+          <span className="flex flex-col gap-0.5">
+            <span className="text-sm font-medium">Ask visitors before Meta tracking</span>
+            <span className="text-muted-foreground text-xs">
+              Shows a short Allow / Don&apos;t allow banner on the storefront. The Meta Pixel sends
+              nothing until a visitor allows it, and a visitor who declines is left out of the
+              server-side events too. The shop&apos;s own analytics are not affected. Mention Meta in
+              your privacy policy either way.
+            </span>
+          </span>
+          <Switch
+            checked={form.consentBanner}
+            onCheckedChange={(v) => set('consentBanner', v)}
+            className="mt-1 shrink-0"
+          />
+        </label>
+
+        <Button type="button" className="self-start" disabled={isSaving} onClick={save}>
+          {isSaving ? (
+            <LoaderCircleIcon className="size-4 animate-spin" />
+          ) : (
+            <CheckIcon className="size-4" />
+          )}
+          Save
+        </Button>
+      </Section>
     </>
   );
 }
+
+const AD_URL_PARAMETERS =
+  'utm_source=facebook&utm_medium=paid_social&utm_campaign={{campaign.id}}&utm_content={{ad.id}}&utm_term={{adset.id}}';
 
 /** Last 30 days of customer orders by where they came from. */
 export function AttributionSummary({ data }: { data: MetaMarketingDto['attribution'] }) {
@@ -421,10 +503,8 @@ export function AttributionSummary({ data }: { data: MetaMarketingDto['attributi
       <p className="text-muted-foreground text-xs">
         Credited to the last visit that had a source. For Meta ads to show up here by campaign, set
         these URL parameters on every ad in Ads Manager:{' '}
-        <code className="font-mono break-all">
-          utm_source=facebook&amp;utm_medium=paid_social&amp;utm_campaign={'{{campaign.id}}'}
-          &amp;utm_content={'{{ad.id}}'}&amp;utm_term={'{{adset.id}}'}
-        </code>
+        {/* One string, so a copy never picks up a line break. */}
+        <code className="font-mono break-all">{AD_URL_PARAMETERS}</code>
       </p>
     </Section>
   );
@@ -435,6 +515,8 @@ const STATUS_VARIANT: Record<MarketingEventDto['status'], 'secondary' | 'destruc
     SENT: 'secondary',
     FAILED: 'destructive',
     PENDING: 'outline',
+    // Not sent because the shopper declined on the consent banner.
+    SKIPPED: 'outline',
   };
 
 /** The last events sent, so "is it working?" has an answer on this page. */

@@ -67,7 +67,19 @@ export const NAV_ITEMS: NavItem[] = [
    * Shopify's Analytics, joined to the ad account. Behind `orders:read`, the
    * same as the Home dashboard it extends.
    */
-  { label: 'Analytics', href: '/analytics', icon: TrendingUpIcon, permission: 'orders:read' },
+  {
+    label: 'Analytics',
+    href: '/analytics',
+    icon: TrendingUpIcon,
+    permission: 'orders:read',
+    children: [
+      { label: 'Overview', href: '/analytics' },
+      { label: 'Acquisition', href: '/analytics/acquisition' },
+      { label: 'Meta ads', href: '/analytics/marketing' },
+      { label: 'Products', href: '/analytics/products' },
+      { label: 'Customers', href: '/analytics/customers' },
+    ],
+  },
   {
     label: 'Products',
     href: '/products',
