@@ -177,7 +177,7 @@ export function CustomerDetailForm({
               {whatsappOptIn
                 ? 'Order, payment and delivery messages. Sign-in codes are sent either way.'
                 : whatsappOptOutAt
-                  ? `Turned off on ${formatStoreDate(whatsappOptOutAt)} — by a STOP reply or by hand.`
+                  ? `Turned off on ${formatStoreDate(whatsappOptOutAt)}. A STOP reply is handled in AiSensy, not shown here.`
                   : 'Turned off.'}
             </span>
           </span>

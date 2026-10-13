@@ -31,14 +31,11 @@ export default async function NotificationsPage() {
   const liveWhatsapp = templates.filter(
     (template) => template.isActive && template.channel === 'WHATSAPP',
   ).length;
-  const whatsappSending = providers.whatsapp.enabled && providers.whatsapp.provider === 'AISENSY';
+  const whatsappSending = providers.whatsapp.enabled;
 
   return (
     <PageContainer>
-      <PageHeader
-        title="Customer messages"
-        subtitle="What the shop tells a customer, and when."
-      />
+      <PageHeader title="Customer messages" subtitle="What the shop tells a customer, and when." />
 
       <div className="flex flex-col gap-4">
         {/*
@@ -47,7 +44,7 @@ export default async function NotificationsPage() {
         */}
         <p className="text-muted-foreground rounded-md border px-3 py-2 text-xs">
           {whatsappSending
-            ? `WhatsApp is live through AiSensy: ${liveWhatsapp} message${liveWhatsapp === 1 ? ' is' : 's are'} switched on, and each sends once WhatsApp has approved its template.`
+            ? `WhatsApp is live through AiSensy: ${liveWhatsapp} message${liveWhatsapp === 1 ? ' is' : 's are'} switched on, each sent through the API campaign named on it.`
             : 'WhatsApp is not switched on, so nothing is sent yet.'}{' '}
           SMS and email are stored but not sent.{' '}
           {live === 0
@@ -57,9 +54,9 @@ export default async function NotificationsPage() {
 
         {activeWithoutProvider > 0 && (
           <p className="rounded-md bg-[var(--warning-bg)] px-3 py-2 text-xs text-[var(--warning-fg)]">
-            {activeWithoutProvider} message{activeWithoutProvider === 1 ? ' is' : 's are'}{' '}
-            switched on for a channel with no provider behind it. That is fine while you
-            get the wording approved — they simply will not go anywhere.
+            {activeWithoutProvider} message{activeWithoutProvider === 1 ? ' is' : 's are'} switched
+            on for a channel with no provider behind it. That is fine while you get the wording
+            approved — they simply will not go anywhere.
           </p>
         )}
 
