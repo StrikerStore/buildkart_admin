@@ -73,6 +73,9 @@ export function LocationForm({
       // it could leak back into a re-render.
       setForm((current) => ({ ...current, serverKey: '', clearServerKey: false }));
       toast.success('Location picker saved');
+      // Brings back the stored key's masked hint. It is read from `initial`, not
+      // `form`: state is seeded once, so the copy in `form` would still say
+      // "Not set" after a save that had in fact stored the key.
       router.refresh();
     });
   }
@@ -155,13 +158,13 @@ export function LocationForm({
                       onChange={(e) => set('serverKey', e.target.value)}
                       disabled={!secretsKeyConfigured || form.clearServerKey}
                       placeholder={
-                        form.serverGeocodeKey.configured
-                          ? (form.serverGeocodeKey.hint ?? '••••')
+                        initial.serverGeocodeKey.configured
+                          ? (initial.serverGeocodeKey.hint ?? '••••')
                           : 'Not set'
                       }
                       className="font-mono"
                     />
-                    {form.serverGeocodeKey.configured && (
+                    {initial.serverGeocodeKey.configured && (
                       <Button
                         type="button"
                         variant="ghost"
@@ -179,7 +182,7 @@ export function LocationForm({
                   <span className="text-muted-foreground text-xs">
                     {form.clearServerKey
                       ? 'Will be removed when you save.'
-                      : form.serverGeocodeKey.configured
+                      : initial.serverGeocodeKey.configured
                         ? 'Leave blank to keep what is stored.'
                         : form.provider === 'GOOGLE'
                           ? 'Used server-side to turn a pin into an address and to power area search — allow the Geocoding and Places (New) APIs on it. A real secret, stored encrypted.'

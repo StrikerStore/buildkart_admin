@@ -12,6 +12,7 @@ import {
   LifeBuoyIcon,
   HistoryIcon,
   SettingsIcon,
+  TrendingUpIcon,
   type LucideIcon,
 } from 'lucide-react';
 import { can, type AdminRole, type Permission } from '@StrikerStore/contract';
@@ -61,6 +62,12 @@ export function navItemsFor(role: AdminRole): NavItem[] {
 export const NAV_ITEMS: NavItem[] = [
   { label: 'Home', href: '/', icon: HouseIcon },
   { label: 'Orders', href: '/orders', icon: ShoppingBagIcon },
+  /*
+   * Sessions, the conversion funnel, sales by channel and Meta ad spend —
+   * Shopify's Analytics, joined to the ad account. Behind `orders:read`, the
+   * same as the Home dashboard it extends.
+   */
+  { label: 'Analytics', href: '/analytics', icon: TrendingUpIcon, permission: 'orders:read' },
   {
     label: 'Products',
     href: '/products',

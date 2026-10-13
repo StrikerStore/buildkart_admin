@@ -1,6 +1,6 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
-import { CreditCardIcon, KeyRoundIcon, PercentIcon } from 'lucide-react';
+import { CreditCardIcon, KeyRoundIcon, MegaphoneIcon, PercentIcon } from 'lucide-react';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { CommerceSettingsForm, StoreProfileForm } from '@/components/settings/SettingsForms';
@@ -95,6 +95,19 @@ export default async function SettingsPage() {
           >
             <PercentIcon className="size-4" />
             Manage GST rates
+          </Link>
+        </Card>
+
+        <Card
+          title="Marketing"
+          subtitle="Meta ads: sales reported from the server, and where orders came from."
+        >
+          <Link
+            href="/settings/marketing"
+            className="inline-flex w-fit items-center gap-2 font-medium hover:underline"
+          >
+            <MegaphoneIcon className="size-4" />
+            Set up the Meta Conversions API
           </Link>
         </Card>
 
