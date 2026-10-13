@@ -2,10 +2,11 @@
 
 import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
-import { CheckIcon, LoaderCircleIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
+import { CheckIcon, LoaderCircleIcon, PlusIcon, TriangleAlertIcon, XIcon } from 'lucide-react';
 import { toast } from 'sonner';
 import {
   EMAIL_PROVIDERS,
+  MAX_ALERT_PHONES,
   PROVIDER_LABELS,
   SMS_PROVIDERS,
   type NotificationProvidersDto,
@@ -297,10 +298,26 @@ function WhatsappForm({
   data: NotificationProvidersDto['whatsapp'];
   keyed: boolean;
 }) {
-  const { form, set, error, isSaving, submit } = useProviderForm(
-    { enabled: data.enabled, apiKey: '', clearApiKey: false },
+  const { form, set, errors, error, isSaving, submit } = useProviderForm(
+    {
+      enabled: data.enabled,
+      apiKey: '',
+      clearApiKey: false,
+      // Always at least one box, so there is somewhere to type the first number.
+      alertPhones: data.alertPhones.length > 0 ? data.alertPhones : [''],
+    },
     saveWhatsappProvider,
   );
+
+  const setPhone = (index: number, value: string) =>
+    set(
+      'alertPhones',
+      form.alertPhones.map((phone, i) => (i === index ? value : phone)),
+    );
+  const removePhone = (index: number) => {
+    const next = form.alertPhones.filter((_, i) => i !== index);
+    set('alertPhones', next.length > 0 ? next : ['']);
+  };
 
   return (
     <Card
@@ -324,6 +341,51 @@ function WhatsappForm({
           onClear={() => set('clearApiKey', !form.clearApiKey)}
           hint="AiSensy → Manage → API Key."
         />
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label>Order alert numbers</Label>
+        <div className="flex flex-col gap-2">
+          {form.alertPhones.map((phone, index) => (
+            <div key={index} className="flex items-center gap-2">
+              <span className="text-muted-foreground text-sm">+91</span>
+              <Input
+                value={phone}
+                inputMode="tel"
+                placeholder="10-digit mobile"
+                onChange={(e) => setPhone(index, e.target.value)}
+                className="max-w-[220px] font-mono"
+                aria-label={`Alert number ${index + 1}`}
+              />
+              {(form.alertPhones.length > 1 || phone !== '') && (
+                <Button type="button" variant="ghost" size="sm" onClick={() => removePhone(index)}>
+                  <XIcon className="size-4" />
+                  <span className="sr-only">Remove this number</span>
+                </Button>
+              )}
+            </div>
+          ))}
+        </div>
+        {form.alertPhones.length < MAX_ALERT_PHONES && (
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => set('alertPhones', [...form.alertPhones, ''])}
+          >
+            <PlusIcon className="size-4" />
+            Add a number
+          </Button>
+        )}
+        {errors.alertPhones ? (
+          <span className="text-xs text-[var(--critical-fg)]">{errors.alertPhones}</span>
+        ) : (
+          <span className="text-muted-foreground text-xs">
+            Every new order is sent to these numbers through the &ldquo;New order alert&rdquo;
+            message (Customer messages → Shop alerts). Up to {MAX_ALERT_PHONES}.
+          </span>
+        )}
       </div>
 
       <p className="text-muted-foreground text-xs">
