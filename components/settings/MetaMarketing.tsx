@@ -11,7 +11,12 @@ import {
   XIcon,
 } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatINR, type MarketingEventDto, type MetaMarketingDto } from '@StrikerStore/contract';
+import {
+  formatINR,
+  STORE_TIME_ZONE,
+  type MarketingEventDto,
+  type MetaMarketingDto,
+} from '@StrikerStore/contract';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -350,6 +355,7 @@ export function MetaMarketingForm({ data }: { data: MetaMarketingDto }) {
             </span>
           ) : data.insightsSync.lastOkAt ? (
             `Last synced ${new Date(data.insightsSync.lastOkAt).toLocaleString('en-IN', {
+              timeZone: STORE_TIME_ZONE,
               day: 'numeric',
               month: 'short',
               hour: 'numeric',
@@ -544,6 +550,7 @@ export function MarketingEventsLog({ events }: { events: MarketingEventDto[] }) 
               <TableRow key={event.id}>
                 <TableCell className="whitespace-nowrap tabular-nums">
                   {new Date(event.createdAt).toLocaleString('en-IN', {
+                    timeZone: STORE_TIME_ZONE,
                     day: 'numeric',
                     month: 'short',
                     hour: 'numeric',

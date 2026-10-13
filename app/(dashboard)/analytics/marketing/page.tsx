@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { TriangleAlertIcon } from 'lucide-react';
-import { formatINR, type AdNodeDto } from '@StrikerStore/contract';
+import { formatINR, type AdNodeDto, STORE_TIME_ZONE } from '@StrikerStore/contract';
 import { StatTile } from '@/components/dashboard/StatTile';
 import { AnalyticsCard, AnalyticsShell } from '@/components/analytics/AnalyticsShell';
 import { AdTree } from '@/components/analytics/AdTree';
@@ -56,6 +56,7 @@ export default async function MarketingAnalyticsPage({
 
   const note = data.lastOkAt
     ? `spend synced ${new Date(data.lastOkAt).toLocaleString('en-IN', {
+        timeZone: STORE_TIME_ZONE,
         day: 'numeric',
         month: 'short',
         hour: 'numeric',
