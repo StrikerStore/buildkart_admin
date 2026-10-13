@@ -91,7 +91,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         backHref="/orders"
         backLabel="Orders"
         badge={<OrderStatusBadge status={order.status} />}
-        subtitle={`Placed ${formatStoreDateTime(order.placedAt)}`}
+        subtitle={[
+          `Placed ${formatStoreDateTime(order.placedAt)}`,
+          order.status === 'DELIVERED' && order.deliveredAt
+            ? `Delivered ${formatStoreDateTime(order.deliveredAt)}`
+            : order.status === 'OUT_FOR_DELIVERY' && order.expectedDeliveryAt
+              ? `Expected ${formatStoreDateTime(order.expectedDeliveryAt)}`
+              : null,
+        ]
+          .filter(Boolean)
+          .join(' · ')}
         actions={
           <>
             <Button asChild variant="outline">

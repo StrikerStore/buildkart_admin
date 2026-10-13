@@ -11,9 +11,13 @@ import {
   CANCEL_REASONS,
   ORDER_STATUS_ACTION_LABELS,
   ORDER_STATUS_LABELS,
+  formatStoreDateTime,
+  parseStoreDateTime,
+  toStoreInputValue,
   type OrderStatus,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -50,20 +54,67 @@ export function OrderActionBar({
   const [reason, setReason] = useState('');
   const [restock, setRestock] = useState(true);
 
+  const [timeStep, setTimeStep] = useState<TimedStatus | null>(null);
+  const [time, setTime] = useState('');
+  const [timeError, setTimeError] = useState<string | null>(null);
+
   const forward = nextStatus(status);
   const back = previousStatus(status);
 
-  function advance(toStatus: OrderStatus) {
+  function advance(
+    toStatus: OrderStatus,
+    times: { expectedDeliveryAt?: string; deliveredAt?: string } = {},
+  ) {
     startTransition(async () => {
-      const result = await advanceOrderStatus({ orderId, toStatus, expectedStatus: status });
+      const result = await advanceOrderStatus({
+        orderId,
+        toStatus,
+        expectedStatus: status,
+        ...times,
+      });
       if (!result.ok) {
-        toast.error(result.formErrors[0] ?? 'Could not update this order.');
+        const message =
+          result.fieldErrors.expectedDeliveryAt ??
+          result.fieldErrors.deliveredAt ??
+          result.formErrors[0] ??
+          'Could not update this order.';
+        if (timeStep) {
+          setTimeError(message);
+          return;
+        }
+        toast.error(message);
         router.refresh();
         return;
       }
       toast.success(`Marked ${ORDER_STATUS_LABELS[result.data.status].toLowerCase()}`);
+      setTimeStep(null);
       router.refresh();
     });
+  }
+
+  /**
+   * Out for delivery and delivered each carry a time the customer is told on
+   * WhatsApp, so those two steps ask for it first; the rest move on one click.
+   */
+  function goForward(toStatus: OrderStatus) {
+    if (toStatus === 'OUT_FOR_DELIVERY') {
+      setTime(toStoreInputValue(hoursFromNow(2)));
+    } else if (toStatus === 'DELIVERED') {
+      setTime(toStoreInputValue(new Date()));
+    } else {
+      advance(toStatus);
+      return;
+    }
+    setTimeError(null);
+    setTimeStep(toStatus);
+  }
+
+  function submitTime() {
+    if (!timeStep || !time) return;
+    advance(
+      timeStep,
+      timeStep === 'OUT_FOR_DELIVERY' ? { expectedDeliveryAt: time } : { deliveredAt: time },
+    );
   }
 
   function submitCancel() {
@@ -124,7 +175,7 @@ export function OrderActionBar({
         )}
 
         {forward && (
-          <Button type="button" disabled={isPending} onClick={() => advance(forward)}>
+          <Button type="button" disabled={isPending} onClick={() => goForward(forward)}>
             {isPending ? (
               <LoaderCircleIcon className="size-4 animate-spin" />
             ) : (
@@ -214,6 +265,88 @@ export function OrderActionBar({
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <Dialog open={timeStep !== null} onOpenChange={(open) => !open && setTimeStep(null)}>
+        <DialogContent className="sm:max-w-[420px]">
+          <DialogHeader>
+            <DialogTitle>
+              {timeStep === 'OUT_FOR_DELIVERY' ? 'Send out for delivery' : 'Mark as delivered'}
+            </DialogTitle>
+            <DialogDescription>
+              {timeStep === 'OUT_FOR_DELIVERY'
+                ? 'When should the customer expect it? This goes in their out-for-delivery WhatsApp message.'
+                : 'When was it handed over? This goes in their delivered WhatsApp message.'}
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-2">
+            <Label htmlFor="status-time">
+              {timeStep === 'OUT_FOR_DELIVERY' ? 'Expected delivery' : 'Delivered on'}
+            </Label>
+            <Input
+              id="status-time"
+              type="datetime-local"
+              value={time}
+              onChange={(event) => {
+                setTime(event.target.value);
+                setTimeError(null);
+              }}
+              max={timeStep === 'DELIVERED' ? toStoreInputValue(new Date()) : undefined}
+            />
+            {timeStep === 'OUT_FOR_DELIVERY' && (
+              <div className="flex flex-wrap gap-1.5">
+                {[1, 2, 4].map((hours) => (
+                  <button
+                    key={hours}
+                    type="button"
+                    onClick={() => {
+                      setTime(toStoreInputValue(hoursFromNow(hours)));
+                      setTimeError(null);
+                    }}
+                    className="hover:bg-muted text-muted-foreground rounded-full border px-2.5 py-1 text-xs transition-colors"
+                  >
+                    In {hours} hour{hours === 1 ? '' : 's'}
+                  </button>
+                ))}
+              </div>
+            )}
+            {time && !timeError && (
+              <span className="text-muted-foreground text-xs">
+                The customer sees: {formatStoreDateTime(parseStoreDateTime(time))}
+              </span>
+            )}
+            {timeError && <span className="text-xs text-[var(--critical-fg)]">{timeError}</span>}
+          </div>
+
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              disabled={isPending}
+              onClick={() => setTimeStep(null)}
+            >
+              Back
+            </Button>
+            <Button type="button" disabled={isPending || !time} onClick={submitTime}>
+              {isPending ? (
+                <LoaderCircleIcon className="size-4 animate-spin" />
+              ) : (
+                <ArrowRightIcon className="size-4" />
+              )}
+              {timeStep ? ORDER_STATUS_ACTION_LABELS[timeStep] : ''}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
+}
+
+type TimedStatus = Extract<OrderStatus, 'OUT_FOR_DELIVERY' | 'DELIVERED'>;
+
+/** Now plus some hours, rounded up to the next half hour — what a rider promises. */
+function hoursFromNow(hours: number): Date {
+  const at = new Date(Date.now() + hours * 3_600_000);
+  const halfHour = 30 * 60_000;
+  return new Date(Math.ceil(at.getTime() / halfHour) * halfHour);
 }
