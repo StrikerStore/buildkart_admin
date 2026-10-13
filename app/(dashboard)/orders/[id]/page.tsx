@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PrinterIcon } from 'lucide-react';
+import { PrinterIcon, TruckIcon } from 'lucide-react';
 import {
   ADMIN_THUMB,
   buildMediaUrl,
@@ -109,6 +109,12 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               <a href={`/orders/${order.id}/invoice`} target="_blank" rel="noreferrer">
                 <PrinterIcon className="size-4" />
                 Print slip
+              </a>
+            </Button>
+            <Button asChild variant="outline">
+              <a href={`/orders/${order.id}/challan`} target="_blank" rel="noreferrer">
+                <TruckIcon className="size-4" />
+                Delivery challan
               </a>
             </Button>
             <OrderActionBar
