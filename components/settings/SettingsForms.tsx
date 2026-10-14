@@ -4,7 +4,7 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { CheckIcon, LoaderCircleIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatINR, formatOrderNumber } from '@StrikerStore/contract';
+import { formatOrderNumber } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -132,7 +132,9 @@ export function CommerceSettingsForm({
   initial: {
     orderMinimumValue: string;
     promiseHours: number;
+    deliveryStartTime: string;
     cutoffTime: string;
+    nextMorningBy: string;
     orderNumberPrefix: string;
     orderNumberSuffix: string;
     orderNumberPadding: number;
@@ -200,6 +202,19 @@ export function CommerceSettingsForm({
           />
         </Field>
         <Field
+          label="Deliveries start"
+          htmlFor="delivery-start"
+          error={errors.deliveryStartTime}
+          hint="Orders confirmed from here until the cutoff get the hours promise."
+        >
+          <Input
+            id="delivery-start"
+            type="time"
+            value={form.deliveryStartTime}
+            onChange={(e) => setForm((c) => ({ ...c, deliveryStartTime: e.target.value }))}
+          />
+        </Field>
+        <Field
           label="Daily cutoff"
           htmlFor="cutoff-time"
           error={errors.cutoffTime}
@@ -210,6 +225,19 @@ export function CommerceSettingsForm({
             type="time"
             value={form.cutoffTime}
             onChange={(e) => setForm((c) => ({ ...c, cutoffTime: e.target.value }))}
+          />
+        </Field>
+        <Field
+          label="Next-morning delivery by"
+          htmlFor="next-morning-by"
+          error={errors.nextMorningBy}
+          hint="What an order confirmed outside the window is promised — tomorrow, or this morning before deliveries start."
+        >
+          <Input
+            id="next-morning-by"
+            type="time"
+            value={form.nextMorningBy}
+            onChange={(e) => setForm((c) => ({ ...c, nextMorningBy: e.target.value }))}
           />
         </Field>
       </div>

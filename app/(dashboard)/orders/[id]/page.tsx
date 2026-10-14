@@ -97,7 +97,10 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             ? `Delivered ${formatStoreDateTime(order.deliveredAt)}`
             : order.status === 'OUT_FOR_DELIVERY' && order.expectedDeliveryAt
               ? `Expected ${formatStoreDateTime(order.expectedDeliveryAt)}`
-              : null,
+              : // What the customer's countdown is running to.
+                order.delivery
+                ? `Promised by ${formatStoreDateTime(order.delivery.by)}`
+                : null,
         ]
           .filter(Boolean)
           .join(' · ')}
