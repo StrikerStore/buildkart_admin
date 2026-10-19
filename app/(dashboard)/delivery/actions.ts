@@ -4,7 +4,7 @@ import { revalidatePath } from 'next/cache';
 import type { ActionResult } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 
-/** The new-order form prefills its delivery charge from these. */
+/** The new-order form checks a pincode against these before prefilling a charge. */
 function revalidateAreas() {
   revalidatePath('/delivery/pincodes');
   revalidatePath('/orders/new');

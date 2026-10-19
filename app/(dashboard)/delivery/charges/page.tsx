@@ -14,7 +14,7 @@ export default async function DeliveryChargesPage() {
     <PageContainer narrow>
       <PageHeader
         title="Delivery charges"
-        subtitle="What a delivery costs, worked out from the warehouse it leaves."
+        subtitle="What a delivery costs: one flat charge, or worked out from the warehouse it leaves."
       />
       <DistancePricingForm initial={settings.distancePricing} />
     </PageContainer>

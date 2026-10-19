@@ -23,6 +23,8 @@ export type DistancePricingValues = {
   smallOrderFee: string;
   smallOrderIncludedKm: number;
   maxCharge: string | null;
+  flatCharge: string;
+  flatFreeAbove: string | null;
 };
 
 function Field({
@@ -65,6 +67,8 @@ export function DistancePricingForm({ initial }: { initial: DistancePricingValue
     smallOrderFee: initial.smallOrderFee,
     smallOrderIncludedKm: String(initial.smallOrderIncludedKm),
     maxCharge: initial.maxCharge ?? '',
+    flatCharge: initial.flatCharge,
+    flatFreeAbove: initial.flatFreeAbove ?? '',
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isSaving, startSaving] = useTransition();
@@ -128,8 +132,8 @@ export function DistancePricingForm({ initial }: { initial: DistancePricingValue
           <span className="flex flex-col gap-0.5">
             <span className="font-medium">Charge by distance</span>
             <span className="text-muted-foreground text-xs">
-              Off means every area keeps its own flat charge, exactly as it does now. Turn this on
-              once the warehouses are entered and stocked.
+              Off means every order pays the flat charge below. Turn this on once the warehouses are
+              entered and stocked.
             </span>
           </span>
           <Switch
@@ -137,6 +141,41 @@ export function DistancePricingForm({ initial }: { initial: DistancePricingValue
             onCheckedChange={(v) => setForm((c) => ({ ...c, enabled: v }))}
           />
         </label>
+      </div>
+
+      <div className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]">
+        <div>
+          <h2 className="font-medium">Flat charge</h2>
+          <p className="text-muted-foreground text-sm">
+            The same for every area you deliver to. Used while charging by distance is off, and for
+            any order distance cannot price — no pin dropped, or an item no warehouse stocks.
+          </p>
+        </div>
+        <div className="grid gap-3 sm:grid-cols-2">
+          <Field label="Delivery charge" htmlFor="flatCharge" error={errors.flatCharge}>
+            <Input
+              id="flatCharge"
+              value={form.flatCharge}
+              onChange={(e) => setForm((c) => ({ ...c, flatCharge: e.target.value }))}
+              inputMode="decimal"
+              className="tabular"
+            />
+          </Field>
+          <Field
+            label="Free delivery above"
+            htmlFor="flatFreeAbove"
+            error={errors.flatFreeAbove}
+            hint="Order value after discount, before tax. Leave blank for none."
+          >
+            <Input
+              id="flatFreeAbove"
+              value={form.flatFreeAbove}
+              onChange={(e) => setForm((c) => ({ ...c, flatFreeAbove: e.target.value }))}
+              inputMode="decimal"
+              className="tabular"
+            />
+          </Field>
+        </div>
       </div>
 
       <div className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]">

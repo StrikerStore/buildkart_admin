@@ -4,7 +4,6 @@ import { useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { LoaderCircleIcon, MapPinIcon, PencilIcon, PlusIcon, TrashIcon } from 'lucide-react';
 import { toast } from 'sonner';
-import { formatINR } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -26,8 +25,6 @@ export type PincodeRow = {
   areaNameEn: string;
   areaNameHi: string | null;
   city: string;
-  deliveryCharge: string;
-  freeDeliveryAbove: string | null;
   promiseHours: number;
   cutoffTime: string | null;
   isActive: boolean;
@@ -39,8 +36,6 @@ const EMPTY = {
   areaNameEn: '',
   areaNameHi: '',
   city: '',
-  deliveryCharge: '0',
-  freeDeliveryAbove: '',
   promiseHours: '4',
   cutoffTime: '',
   isActive: true,
@@ -93,8 +88,6 @@ export function PincodeTable({ rows }: { rows: PincodeRow[] }) {
       areaNameEn: row.areaNameEn,
       areaNameHi: row.areaNameHi ?? '',
       city: row.city,
-      deliveryCharge: row.deliveryCharge,
-      freeDeliveryAbove: row.freeDeliveryAbove ?? '',
       promiseHours: String(row.promiseHours),
       cutoffTime: row.cutoffTime ?? '',
       isActive: row.isActive,
@@ -146,8 +139,8 @@ export function PincodeTable({ rows }: { rows: PincodeRow[] }) {
           <p className="font-medium">No delivery areas yet</p>
           <p className="text-muted-foreground max-w-[420px]">
             {/* Until one exists the storefront cannot tell a customer whether it
-                delivers to them, and the order form has no charge to prefill. */}
-            Add the pincodes you deliver to. Each one carries its own charge and promise.
+                delivers to them. What delivery costs is set under Delivery charges. */}
+            Add the pincodes you deliver to. Each one carries its own delivery promise.
           </p>
           <Button type="button" className="mt-1" onClick={openNew}>
             <PlusIcon className="size-4" />
@@ -159,8 +152,6 @@ export function PincodeTable({ rows }: { rows: PincodeRow[] }) {
           <div className="text-muted-foreground bg-muted/40 hidden items-center gap-3 border-b px-3 py-2 text-xs font-medium sm:flex">
             <span className="w-[76px] shrink-0">Pincode</span>
             <span className="min-w-0 flex-1">Area</span>
-            <span className="w-[100px] shrink-0 text-right">Delivery</span>
-            <span className="w-[110px] shrink-0 text-right">Free above</span>
             <span className="w-[86px] shrink-0 text-right">Promise</span>
             <span className="w-[80px] shrink-0" />
           </div>
@@ -187,14 +178,6 @@ export function PincodeTable({ rows }: { rows: PincodeRow[] }) {
                     {row.city}
                     {row.areaNameHi && ` · ${row.areaNameHi}`}
                   </span>
-                </span>
-
-                <span className="tabular w-[100px] shrink-0 text-right">
-                  {row.deliveryCharge === '0.00' ? 'Free' : formatINR(row.deliveryCharge)}
-                </span>
-
-                <span className="tabular text-muted-foreground w-[110px] shrink-0 text-right text-xs">
-                  {row.freeDeliveryAbove ? formatINR(row.freeDeliveryAbove) : '—'}
                 </span>
 
                 <span className="tabular text-muted-foreground w-[86px] shrink-0 text-right text-xs">
@@ -231,7 +214,8 @@ export function PincodeTable({ rows }: { rows: PincodeRow[] }) {
           <DialogHeader>
             <DialogTitle>{form.id ? 'Edit delivery area' : 'Add delivery area'}</DialogTitle>
             <DialogDescription>
-              What it costs to deliver here, and how quickly it is promised.
+              Where you deliver, and how quickly it is promised. The charge is set under Delivery
+              charges.
             </DialogDescription>
           </DialogHeader>
 
@@ -269,29 +253,6 @@ export function PincodeTable({ rows }: { rows: PincodeRow[] }) {
                 value={form.areaNameHi}
                 onChange={(e) => setForm((c) => ({ ...c, areaNameHi: e.target.value }))}
                 placeholder="नेहरू नगर"
-              />
-            </Field>
-            <Field label="Delivery charge" htmlFor="charge" error={errors.deliveryCharge}>
-              <Input
-                id="charge"
-                value={form.deliveryCharge}
-                onChange={(e) => setForm((c) => ({ ...c, deliveryCharge: e.target.value }))}
-                inputMode="decimal"
-                className="tabular"
-              />
-            </Field>
-            <Field
-              label="Free delivery above"
-              htmlFor="free"
-              error={errors.freeDeliveryAbove}
-              hint="Leave blank for none."
-            >
-              <Input
-                id="free"
-                value={form.freeDeliveryAbove}
-                onChange={(e) => setForm((c) => ({ ...c, freeDeliveryAbove: e.target.value }))}
-                inputMode="decimal"
-                className="tabular"
               />
             </Field>
             <Field

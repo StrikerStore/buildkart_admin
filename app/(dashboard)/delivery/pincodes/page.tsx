@@ -19,7 +19,7 @@ export default async function PincodesPage() {
         subtitle={
           rows.length > 0
             ? `${live} area${live === 1 ? '' : 's'} delivering, ${rows.length} listed`
-            : 'Where BuildKart delivers, and what it costs.'
+            : 'Where BuildKart delivers, and how quickly.'
         }
       />
       <div className="flex flex-col gap-4">
