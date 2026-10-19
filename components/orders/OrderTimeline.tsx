@@ -24,7 +24,12 @@ export function OrderTimeline({
   events: OrderEventDto[];
 }) {
   const cancelled = status === 'CANCELLED';
-  const reachedIndex = (ORDER_FLOW as readonly OrderStatus[]).indexOf(status);
+  // Partly delivered sits between the road and the doorstep: drawn at the
+  // out-for-delivery rung, under its own name.
+  const partly = status === 'PARTIALLY_DELIVERED';
+  const reachedIndex = (ORDER_FLOW as readonly OrderStatus[]).indexOf(
+    partly ? 'OUT_FOR_DELIVERY' : status,
+  );
 
   // Newest first: the last thing that happened is what anyone opening this
   // screen is looking for.
@@ -57,7 +62,9 @@ export function OrderTimeline({
                   ) : (
                     <CircleIcon className={cn('size-3', current && 'fill-current')} />
                   )}
-                  {ORDER_STATUS_LABELS[step]}
+                  {current && partly
+                    ? ORDER_STATUS_LABELS.PARTIALLY_DELIVERED
+                    : ORDER_STATUS_LABELS[step]}
                 </span>
                 {index < ORDER_FLOW.length - 1 && (
                   <span
@@ -86,7 +93,9 @@ export function OrderTimeline({
                     ? 'bg-[var(--critical-fg)]'
                     : event.toStatus === 'DELIVERED'
                       ? 'bg-[var(--success)]'
-                      : 'bg-border',
+                      : event.toStatus === 'PARTIALLY_DELIVERED'
+                        ? 'bg-[var(--warning-fg)]'
+                        : 'bg-border',
                 )}
               />
               <span className="flex min-w-0 flex-col gap-0.5">

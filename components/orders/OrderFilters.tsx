@@ -4,7 +4,6 @@ import { useEffect, useState, useTransition } from 'react';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { SearchIcon, XIcon } from 'lucide-react';
 import {
-  ORDER_STATUSES,
   ORDER_STATUS_LABELS,
   PAYMENT_METHODS,
   PAYMENT_METHOD_LABELS,
@@ -32,9 +31,23 @@ const ALL = '__all__';
  * a tab has to show how many orders are waiting even when the current filter
  * excludes them.
  */
+const STATUS_TAB_ORDER = [
+  'PLACED',
+  'CONFIRMED',
+  'PACKED',
+  'OUT_FOR_DELIVERY',
+  'PARTIALLY_DELIVERED',
+  'DELIVERED',
+  'CANCELLED',
+] as const;
+
+/*
+ * In the order work happens, not the order the statuses were added in:
+ * "Partly delivered" belongs beside "Out for delivery", not after "Cancelled".
+ */
 const STATUS_TABS = [
   { value: 'ALL', label: 'All' },
-  ...ORDER_STATUSES.map((status) => ({ value: status, label: ORDER_STATUS_LABELS[status] })),
+  ...STATUS_TAB_ORDER.map((status) => ({ value: status, label: ORDER_STATUS_LABELS[status] })),
 ] as const;
 
 const RANGES = [
@@ -70,6 +83,7 @@ export function OrderFilters({ counts }: { counts: Record<string, number> }) {
   const gateway = params.get('gateway') ?? ALL;
   const range = params.get('range') ?? 'all';
   const sort = params.get('sort') ?? 'newest';
+  const view = params.get('view') === 'ARCHIVED' ? 'ARCHIVED' : 'ACTIVE';
 
   function apply(changes: Record<string, string | null>) {
     const next = new URLSearchParams(params.toString());
@@ -102,6 +116,25 @@ export function OrderFilters({ counts }: { counts: Record<string, number> }) {
 
   return (
     <div className="flex flex-col gap-3">
+      {/* Archived orders are their own view, never mixed into the working list. */}
+      <div className="flex items-center gap-1 self-start rounded-md border p-0.5 text-xs">
+        {(['ACTIVE', 'ARCHIVED'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            onClick={() => apply({ view: option === 'ACTIVE' ? null : 'ARCHIVED', status: null })}
+            className={cn(
+              'rounded px-2.5 py-1 font-medium transition-colors',
+              view === option
+                ? 'bg-muted text-foreground'
+                : 'text-muted-foreground hover:text-foreground',
+            )}
+          >
+            {option === 'ACTIVE' ? 'Active' : 'Archived'}
+          </button>
+        ))}
+      </div>
+
       <div className="flex items-center gap-1 overflow-x-auto border-b">
         {STATUS_TABS.map((tab) => {
           const count = counts[tab.value] ?? 0;
@@ -210,7 +243,10 @@ export function OrderFilters({ counts }: { counts: Record<string, number> }) {
             size="sm"
             onClick={() => {
               setQuery('');
-              startTransition(() => router.replace(pathname));
+              // Clearing filters keeps you in the view you were in.
+              startTransition(() =>
+                router.replace(view === 'ARCHIVED' ? `${pathname}?view=ARCHIVED` : pathname),
+              );
             }}
           >
             <XIcon className="size-4" />

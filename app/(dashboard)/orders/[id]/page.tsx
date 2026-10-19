@@ -15,6 +15,8 @@ import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { OrderStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { OrderTimeline } from '@/components/orders/OrderTimeline';
 import { OrderActionBar } from '@/components/orders/OrderActionBar';
+import { ArchiveButton } from '@/components/orders/ArchiveButton';
+import { DeliveriesCard, type DeliveryLine } from '@/components/orders/DeliveriesCard';
 import { OrderNoteEditor } from '@/components/orders/OrderSideControls';
 import { PaymentPanel } from '@/components/orders/PaymentPanel';
 import { MessageLog } from '@/components/notifications/MessageLog';
@@ -84,6 +86,30 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   // panel offers to collect is the same one the action will accept.
   const { outstanding } = totalPayments(order.transactions, order.grandTotal);
 
+  // Each line and how far it has got across the order's loads.
+  const progress = new Map(order.fulfillment.map((line) => [line.orderItemId, line]));
+  const lines: DeliveryLine[] = order.items.map((item) => {
+    const line = progress.get(item.id);
+    return {
+      id: item.id,
+      name: item.snapshot.nameEn,
+      detail: item.snapshot.optionValues.join(' / ') || null,
+      unitLabel: item.snapshot.unitLabelEn ?? null,
+      ordered: line?.ordered ?? item.quantity,
+      onRoad: line?.onRoad ?? 0,
+      delivered: line?.delivered ?? 0,
+      remaining: line?.remaining ?? 0,
+    };
+  });
+  const openShipments = order.shipments.filter((shipment) => shipment.status === 'OUT_FOR_DELIVERY');
+  const hasDelivered = order.shipments.some((shipment) => shipment.status === 'DELIVERED');
+  const stillToSend = lines.reduce((sum, line) => sum + line.remaining, 0);
+  // The challan button prints the load on the road when there is exactly one.
+  const challanHref =
+    openShipments.length === 1
+      ? `/orders/${order.id}/challan?delivery=${openShipments[0]!.id}`
+      : `/orders/${order.id}/challan`;
+
   return (
     <PageContainer>
       <PageHeader
@@ -95,7 +121,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           `Placed ${formatStoreDateTime(order.placedAt)}`,
           order.status === 'DELIVERED' && order.deliveredAt
             ? `Delivered ${formatStoreDateTime(order.deliveredAt)}`
-            : order.status === 'OUT_FOR_DELIVERY' && order.expectedDeliveryAt
+            : order.status === 'PARTIALLY_DELIVERED'
+              ? `${stillToSend} unit${stillToSend === 1 ? '' : 's'} still to send`
+              : order.status === 'OUT_FOR_DELIVERY' && order.expectedDeliveryAt
               ? `Expected ${formatStoreDateTime(order.expectedDeliveryAt)}`
               : // What the customer's countdown is running to.
                 order.delivery
@@ -115,15 +143,21 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               </a>
             </Button>
             <Button asChild variant="outline">
-              <a href={`/orders/${order.id}/challan`} target="_blank" rel="noreferrer">
+              <a href={challanHref} target="_blank" rel="noreferrer">
                 <TruckIcon className="size-4" />
                 Delivery challan
               </a>
             </Button>
+            {(order.status === 'DELIVERED' || order.status === 'CANCELLED' || order.archivedAt) && (
+              <ArchiveButton orderId={order.id} archived={order.archivedAt !== null} />
+            )}
             <OrderActionBar
               orderId={order.id}
               status={order.status}
               itemCount={order.items.length}
+              lines={lines}
+              openShipments={openShipments.length}
+              hasDelivered={hasDelivered}
             />
           </>
         }
@@ -131,10 +165,29 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_320px]">
         <div className="flex min-w-0 flex-col gap-4">
+          {order.archivedAt && (
+            <div className="text-muted-foreground rounded-lg border px-4 py-2.5">
+              Archived {formatStoreDateTime(order.archivedAt)} — it is out of the main orders
+              list. Unarchive it to bring it back.
+            </div>
+          )}
+
           {order.cancelReason && (
             <div className="flex flex-col gap-1 rounded-lg bg-[var(--critical-bg)] px-4 py-3 text-[var(--critical-fg)]">
               <span className="font-semibold">Cancelled</span>
               <span>{order.cancelReason}</span>
+            </div>
+          )}
+
+          {order.closedShortAt && (
+            <div className="flex flex-col gap-1 rounded-lg bg-[var(--warning-bg)] px-4 py-3 text-[var(--warning-fg)]">
+              <span className="font-semibold">
+                Closed short {formatStoreDateTime(order.closedShortAt)}
+              </span>
+              {order.closedShortReason && <span>{order.closedShortReason}</span>}
+              <span className="text-xs">
+                Billed for what was delivered; lines show what was ordered beside it.
+              </span>
             </div>
           )}
 
@@ -197,7 +250,15 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                           bulk
                         </span>
                       )}
-                      <span className="block">× {item.quantity}</span>
+                      <span className="block">
+                        × {item.quantity}
+                        {item.orderedQuantity !== null && (
+                          <span className="text-[var(--warning-fg)]">
+                            {' '}
+                            of {item.orderedQuantity} ordered
+                          </span>
+                        )}
+                      </span>
                     </span>
 
                     <span className="tabular w-[88px] shrink-0 text-right font-medium">
@@ -251,6 +312,18 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               )}
             </div>
           </Card>
+
+          {(order.shipments.length > 0 || order.status === 'PACKED') && (
+            <Card title="Deliveries">
+              <DeliveriesCard
+                orderId={order.id}
+                status={order.status}
+                paymentMethod={order.paymentMethod}
+                lines={lines}
+                shipments={order.shipments}
+              />
+            </Card>
+          )}
 
           <Card title="Timeline">
             <OrderTimeline status={order.status} events={order.events} />

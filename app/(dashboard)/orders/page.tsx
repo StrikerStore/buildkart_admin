@@ -29,6 +29,7 @@ export default async function OrdersPage({
     range: typeof raw.range === 'string' ? raw.range : undefined,
     sort: typeof raw.sort === 'string' ? raw.sort : undefined,
     page: typeof raw.page === 'string' ? raw.page : undefined,
+    view: typeof raw.view === 'string' ? raw.view : undefined,
   });
   // A hand-edited URL should show the default list, not an error page.
   const query = parsed.success ? parsed.data : orderListQuerySchema.parse({});
@@ -45,6 +46,7 @@ export default async function OrdersPage({
     if (query.gateway !== 'ALL') next.set('gateway', query.gateway);
     if (query.range !== 'all') next.set('range', query.range);
     if (query.sort !== 'newest') next.set('sort', query.sort);
+    if (query.view !== 'ACTIVE') next.set('view', query.view);
     if (page > 1) next.set('page', String(page));
     return `/orders${next.toString() ? `?${next}` : ''}`;
   };
@@ -90,15 +92,23 @@ export default async function OrdersPage({
             <ShoppingBagIcon className="text-muted-foreground size-8" strokeWidth={1.5} />
             <div className="flex flex-col gap-1">
               <p className="font-medium">
-                {isFiltered ? 'No orders match these filters' : 'No orders yet'}
+                {query.view === 'ARCHIVED'
+                  ? isFiltered
+                    ? 'No archived orders match these filters'
+                    : 'Nothing archived yet'
+                  : isFiltered
+                    ? 'No orders match these filters'
+                    : 'No orders yet'}
               </p>
               <p className="text-muted-foreground max-w-[400px]">
-                {isFiltered
-                  ? 'Try a wider date range or clear a filter.'
-                  : 'Orders placed on the storefront appear here the moment they land — or take one by phone.'}
+                {query.view === 'ARCHIVED'
+                  ? 'Delivered and cancelled orders you archive are kept here, out of the main list.'
+                  : isFiltered
+                    ? 'Try a wider date range or clear a filter.'
+                    : 'Orders placed on the storefront appear here the moment they land — or take one by phone.'}
               </p>
             </div>
-            {!isFiltered && (
+            {!isFiltered && query.view === 'ACTIVE' && (
               <Button asChild className="mt-1">
                 <Link href="/orders/new">
                   <PlusIcon className="size-4" />
@@ -108,7 +118,20 @@ export default async function OrdersPage({
             )}
           </div>
         ) : (
-          <OrderListTable orders={orders} />
+          <OrderListTable orders={orders} view={query.view} />
+        )}
+
+        {/* Archived orders sit in their own view, so a search here misses them. */}
+        {query.q && query.view === 'ACTIVE' && (
+          <p className="text-muted-foreground text-xs">
+            Archived orders aren&apos;t searched here.{' '}
+            <Link
+              href={`/orders?view=ARCHIVED&q=${encodeURIComponent(query.q)}`}
+              className="underline"
+            >
+              Search the archive
+            </Link>
+          </p>
         )}
 
         {totalPages > 1 && (

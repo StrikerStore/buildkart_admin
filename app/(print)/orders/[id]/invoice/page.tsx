@@ -167,7 +167,8 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
             </tr>
           </thead>
           <tbody>
-            {order.items.map((item) => {
+            {/* A line closed short to nothing was never supplied, so it is not billed. */}
+            {order.items.filter((item) => item.quantity > 0).map((item) => {
               const label = [item.snapshot.optionValues.join(' / '), item.snapshot.sku]
                 .filter(Boolean)
                 .join(' · ');
@@ -189,6 +190,9 @@ export default async function InvoicePage({ params }: { params: Promise<{ id: st
                     {item.quantity}
                     {item.snapshot.unitLabelEn && (
                       <span className="block text-neutral-600">{item.snapshot.unitLabelEn}</span>
+                    )}
+                    {item.orderedQuantity !== null && (
+                      <span className="block text-neutral-600">of {item.orderedQuantity} ordered</span>
                     )}
                   </td>
                   <td className="tabular py-2 text-right">{formatINR(item.unitPrice)}</td>

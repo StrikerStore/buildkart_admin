@@ -8,6 +8,7 @@ import {
   PAYMENT_METHOD_LABELS,
   totalPayments,
   type OrderDetailDto,
+  type ShipmentStatus,
   type SettingValue,
 } from '@StrikerStore/contract';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
@@ -45,13 +46,18 @@ const COPY_LABELS: Record<Copy, string> = {
  * business.
  *
  * `?copies=2` adds a customer copy on a second page.
+ *
+ * `?delivery=<id>` prints one load of an order sent in loads: its items, its
+ * number (`BK-1042/2`) and the cash that load collects. With no delivery named,
+ * the load on the road is printed when there is exactly one; otherwise the
+ * whole order.
  */
 export default async function ChallanPage({
   params,
   searchParams,
 }: {
   params: Promise<{ id: string }>;
-  searchParams: Promise<{ copies?: string }>;
+  searchParams: Promise<{ copies?: string; delivery?: string }>;
 }) {
   await requireAdmin();
   const [{ id }, query] = await Promise.all([params, searchParams]);
@@ -65,6 +71,8 @@ export default async function ChallanPage({
 
   const copies: Copy[] = query.copies === '2' ? ['SHOP', 'CUSTOMER'] : ['SHOP'];
   const cancelled = order.status === 'CANCELLED';
+  const view = challanView(order, query.delivery);
+  const base = `/orders/${order.id}/challan${view.shipmentId ? `?delivery=${view.shipmentId}&` : '?'}`;
 
   return (
     <>
@@ -85,11 +93,11 @@ export default async function ChallanPage({
             </p>
             <div className="flex items-center gap-3">
               {copies.length === 1 ? (
-                <a href={`/orders/${order.id}/challan?copies=2`} className="underline">
+                <a href={`${base}copies=2`} className="underline">
                   Add a customer copy
                 </a>
               ) : (
-                <a href={`/orders/${order.id}/challan`} className="underline">
+                <a href={base.slice(0, -1)} className="underline">
                   Shop copy only
                 </a>
               )}
@@ -101,36 +109,115 @@ export default async function ChallanPage({
               This order is cancelled. Do not send goods against this challan.
             </p>
           )}
+          {view.status === 'CANCELLED' && !cancelled && (
+            <p className="font-medium text-red-700">
+              This delivery was called back. Do not send goods against this challan.
+            </p>
+          )}
         </div>
 
         {copies.map((copy) => (
-          <Challan key={copy} order={order} store={settings.store} copy={copy} />
+          <Challan key={copy} order={order} store={settings.store} copy={copy} view={view} />
         ))}
       </div>
     </>
   );
 }
 
+type ChallanLine = {
+  id: string;
+  nameEn: string;
+  nameHi: string | null;
+  detail: string;
+  unitLabel: string;
+  quantity: number;
+};
+
+/** What one challan carries: the whole order, or one load of it. */
+type ChallanView = {
+  number: string;
+  shipmentId: string | null;
+  status: ShipmentStatus | null;
+  expectedDeliveryAt: string | null;
+  lines: ChallanLine[];
+  /** Cash for the driver to take; null when nothing is due. */
+  collect: string | null;
+  /** Cash already taken against this load, for a reprint after it arrived. */
+  collected: string | null;
+  isLoad: boolean;
+};
+
+function challanView(order: OrderDetailDto, deliveryId: string | undefined): ChallanView {
+  const open = order.shipments.filter((shipment) => shipment.status === 'OUT_FOR_DELIVERY');
+  const shipment =
+    (deliveryId ? order.shipments.find((entry) => entry.id === deliveryId) : undefined) ??
+    (open.length === 1 ? open[0] : undefined);
+
+  const byItem = new Map(order.items.map((item) => [item.id, item]));
+  const lineOf = (orderItemId: string, quantity: number): ChallanLine | null => {
+    const item = byItem.get(orderItemId);
+    if (!item) return null;
+    return {
+      id: orderItemId,
+      nameEn: item.snapshot.nameEn,
+      nameHi: item.snapshot.nameHi ?? null,
+      detail: [item.snapshot.optionValues.join(' / '), item.snapshot.sku]
+        .filter(Boolean)
+        .join(' · '),
+      unitLabel: item.snapshot.unitLabelEn ?? '',
+      quantity,
+    };
+  };
+
+  if (shipment) {
+    return {
+      number: shipment.label,
+      shipmentId: shipment.id,
+      status: shipment.status,
+      expectedDeliveryAt: shipment.expectedDeliveryAt,
+      lines: shipment.items.flatMap((item) => lineOf(item.orderItemId, item.quantity) ?? []),
+      collect: shipment.toCollect && shipment.toCollect !== '0.00' ? shipment.toCollect : null,
+      collected: shipment.cashCollected !== '0.00' ? shipment.cashCollected : null,
+      isLoad: true,
+    };
+  }
+
+  // What is left to collect at the door, not the order total: part of it may
+  // already have been paid online or from store credit.
+  const { outstanding } = totalPayments(order.transactions, order.grandTotal);
+  return {
+    number: order.orderNumber,
+    shipmentId: null,
+    status: null,
+    expectedDeliveryAt: order.expectedDeliveryAt,
+    // A line closed short to nothing was never sent.
+    lines: order.items.flatMap((item) =>
+      item.quantity > 0 ? (lineOf(item.id, item.quantity) ?? []) : [],
+    ),
+    collect: outstanding !== '0.00' ? outstanding : null,
+    collected: null,
+    isLoad: false,
+  };
+}
+
 function Challan({
   order,
   store,
   copy,
+  view,
 }: {
   order: OrderDetailDto;
   store: SettingValue<'store.profile'>;
   copy: Copy;
+  view: ChallanView;
 }) {
   const { address } = order;
   const receiverName = address.name || order.customer.name || 'Customer';
   const receiverPhone = address.phone || order.customer.phone;
   // The account holder, when someone else is taking the delivery on site.
   const orderedBySomeoneElse = Boolean(address.phone) && address.phone !== order.customer.phone;
-  const totalUnits = order.items.reduce((sum, item) => sum + item.quantity, 0);
-
-  // What is left to collect at the door, not the order total: part of it may
-  // already have been paid online or from store credit.
-  const { outstanding } = totalPayments(order.transactions, order.grandTotal);
-  const alreadyPaid = outstanding !== order.grandTotal;
+  const totalUnits = view.lines.reduce((sum, line) => sum + line.quantity, 0);
+  const alreadyPaid = !view.isLoad && view.collect !== order.grandTotal;
 
   const pin =
     address.latitude != null && address.longitude != null
@@ -166,8 +253,11 @@ function Challan({
             {COPY_LABELS[copy]}
           </span>
           <span className="mt-1">
-            Challan no. <span className="font-bold">{order.orderNumber}</span>
+            Challan no. <span className="font-bold">{view.number}</span>
           </span>
+          {view.isLoad && (
+            <span className="text-neutral-700">Part of order {order.orderNumber}</span>
+          )}
           <span className="text-neutral-700">Order date {formatStoreDate(order.placedAt)}</span>
           <span className="text-neutral-700">
             {order.status === 'CANCELLED' ? 'CANCELLED' : ORDER_STATUS_LABELS[order.status]}
@@ -208,8 +298,8 @@ function Challan({
           <h2 className="font-semibold uppercase tracking-wide text-neutral-600">
             Dispatch / भेजने का विवरण
           </h2>
-          {order.expectedDeliveryAt && (
-            <Line label="Expected delivery" value={formatStoreDateTime(order.expectedDeliveryAt)} />
+          {view.expectedDeliveryAt && (
+            <Line label="Expected delivery" value={formatStoreDateTime(view.expectedDeliveryAt)} />
           )}
           {order.unloadingCharge !== '0.00' && (
             <Line label="Unloading" value="Included — unload at site" strong />
@@ -236,26 +326,19 @@ function Challan({
           </tr>
         </thead>
         <tbody>
-          {order.items.map((item, index) => {
-            const detail = [item.snapshot.optionValues.join(' / '), item.snapshot.sku]
-              .filter(Boolean)
-              .join(' · ');
+          {view.lines.map((line, index) => {
             return (
-              <tr key={item.id} className="align-top">
+              <tr key={line.id} className="align-top">
                 <td className="border border-black px-2 py-1.5">{index + 1}</td>
                 <td className="border border-black px-2 py-1.5">
-                  <span className="block font-medium">{item.snapshot.nameEn}</span>
+                  <span className="block font-medium">{line.nameEn}</span>
                   {/* The person signing on site may not read the English name. */}
-                  {item.snapshot.nameHi && (
-                    <span className="block text-neutral-700">{item.snapshot.nameHi}</span>
-                  )}
-                  {detail && <span className="block text-neutral-600">{detail}</span>}
+                  {line.nameHi && <span className="block text-neutral-700">{line.nameHi}</span>}
+                  {line.detail && <span className="block text-neutral-600">{line.detail}</span>}
                 </td>
-                <td className="border border-black px-2 py-1.5">
-                  {item.snapshot.unitLabelEn ?? ''}
-                </td>
+                <td className="border border-black px-2 py-1.5">{line.unitLabel}</td>
                 <td className="tabular border border-black px-2 py-1.5 text-right font-semibold">
-                  {item.quantity}
+                  {line.quantity}
                 </td>
                 {/* Left blank on purpose: filled in by hand on delivery. */}
                 <td className="border border-black px-2 py-1.5" />
@@ -266,7 +349,7 @@ function Challan({
           <tr>
             <td className="border border-black px-2 py-1.5" />
             <td className="border border-black px-2 py-1.5 font-semibold" colSpan={2}>
-              Total ({order.items.length} item{order.items.length === 1 ? '' : 's'})
+              Total ({view.lines.length} item{view.lines.length === 1 ? '' : 's'})
             </td>
             <td className="tabular border border-black px-2 py-1.5 text-right font-bold">
               {totalUnits}
@@ -278,22 +361,32 @@ function Challan({
       </table>
 
       <section className="rounded border-2 border-black px-3 py-2">
-        {outstanding !== '0.00' ? (
+        {view.collected ? (
+          <span className="text-[15px] font-bold">
+            Collected {formatINR(view.collected)} on this delivery
+          </span>
+        ) : view.collect ? (
           <div className="flex flex-wrap items-baseline justify-between gap-2">
             <span className="text-[15px] font-bold">
-              Collect {formatINR(outstanding)} on delivery
+              Collect {formatINR(view.collect)} on delivery
               <span className="ml-2 font-normal text-neutral-700">
                 ({PAYMENT_METHOD_LABELS[order.paymentMethod]})
               </span>
             </span>
-            {alreadyPaid && (
-              <span className="text-neutral-700">
-                Order total {formatINR(order.grandTotal)}, the rest already paid
-              </span>
+            {view.isLoad ? (
+              <span className="text-neutral-700">For this load only</span>
+            ) : (
+              alreadyPaid && (
+                <span className="text-neutral-700">
+                  Order total {formatINR(order.grandTotal)}, the rest already paid
+                </span>
+              )
             )}
           </div>
         ) : (
-          <span className="text-[15px] font-bold">Paid in full — nothing to collect</span>
+          <span className="text-[15px] font-bold">
+            {view.isLoad ? 'Nothing to collect on this load' : 'Paid in full — nothing to collect'}
+          </span>
         )}
       </section>
 
