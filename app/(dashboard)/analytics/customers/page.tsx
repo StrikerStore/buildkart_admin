@@ -23,6 +23,12 @@ const MONTH = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'UTC',
 });
 const monthLabel = (key: string) => MONTH.format(new Date(`${key}-01T00:00:00Z`));
+/** The label of the month before a "YYYY-MM" key. */
+const previousMonthLabel = (key: string) => {
+  const at = new Date(`${key}-01T00:00:00Z`);
+  at.setUTCMonth(at.getUTCMonth() - 1);
+  return MONTH.format(at);
+};
 
 /**
  * Who buys, and whether they come back.
@@ -41,6 +47,9 @@ export default async function CustomerAnalyticsPage({
   const data = await (await api()).analytics.customers.query(query);
   const { period } = data;
   const months = data.cohorts[0]?.retention.length ?? 0;
+  // Newest first: the month just gone is the one the owner is asking about.
+  const monthly = [...data.monthlyRetention].reverse();
+  const latest = monthly.find((row) => !row.partial && row.rate !== null);
 
   return (
     <AnalyticsShell active="/analytics/customers" query={query} period={period}>
@@ -66,6 +75,91 @@ export default async function CustomerAnalyticsPage({
           footnote="Of this period's customers, share with 2+ orders ever"
         />
       </div>
+
+      <AnalyticsCard
+        title="Month-on-month retention"
+        subtitle="Of the customers who ordered in one month, the share who ordered again the next. Not affected by the period filter."
+        actions={
+          <CsvButton
+            filename="month-on-month-retention"
+            columns={[
+              'Month',
+              'Customers',
+              'Customers the month before',
+              'Ordered again',
+              'Retention rate',
+              'Month complete',
+            ]}
+            rows={data.monthlyRetention.map((row) => [
+              row.month,
+              row.customers,
+              row.previousCustomers,
+              row.retained,
+              row.rate === null ? '' : row.rate.toFixed(4),
+              row.partial ? 'no' : 'yes',
+            ])}
+          />
+        }
+      >
+        {latest && (
+          <p className="text-sm">
+            <span className="text-2xl font-semibold tabular-nums">{percent(latest.rate, 0)}</span>{' '}
+            <span className="text-muted-foreground">
+              in {monthLabel(latest.month)}: {latest.retained} of the{' '}
+              {latest.previousCustomers.toLocaleString('en-IN')} customers from{' '}
+              {previousMonthLabel(latest.month)} ordered again.
+            </span>
+          </p>
+        )}
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Month</TableHead>
+              <TableHead className="text-right">Customers</TableHead>
+              <TableHead className="text-right">From the month before</TableHead>
+              <TableHead className="text-right">Ordered again</TableHead>
+              <TableHead className="w-[40%]">Retention</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {monthly.map((row) => (
+              <TableRow key={row.month}>
+                <TableCell className="whitespace-nowrap">
+                  {monthLabel(row.month)}
+                  {row.partial && <span className="text-muted-foreground ml-1.5 text-xs">so far</span>}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.customers.toLocaleString('en-IN')}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.previousCustomers.toLocaleString('en-IN')}
+                </TableCell>
+                <TableCell className="text-right tabular-nums">
+                  {row.retained.toLocaleString('en-IN')}
+                </TableCell>
+                <TableCell>
+                  {/* The printed share is the value; the bar only makes the column scannable. */}
+                  <div className="flex items-center gap-2">
+                    <span className="w-12 shrink-0 text-right tabular-nums">
+                      {percent(row.rate, 0)}
+                    </span>
+                    <div className="bg-muted h-1.5 min-w-0 flex-1 rounded-full">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.round((row.rate ?? 0) * 100)}%`,
+                          background: 'var(--chart-1)',
+                          opacity: row.partial ? 0.5 : 1,
+                        }}
+                      />
+                    </div>
+                  </div>
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </AnalyticsCard>
 
       <AnalyticsCard
         title="Monthly cohorts"

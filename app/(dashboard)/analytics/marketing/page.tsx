@@ -5,6 +5,7 @@ import { formatINR, type AdNodeDto, STORE_TIME_ZONE } from '@StrikerStore/contra
 import { StatTile } from '@/components/dashboard/StatTile';
 import { AnalyticsCard, AnalyticsShell } from '@/components/analytics/AnalyticsShell';
 import { AdTree } from '@/components/analytics/AdTree';
+import { CityCsvButton, CityTable } from '@/components/analytics/CityTable';
 import { CsvButton } from '@/components/analytics/CsvButton';
 import { SeriesChart } from '@/components/analytics/SeriesChart';
 import { requirePermission } from '@/lib/auth/requireAdmin';
@@ -42,7 +43,7 @@ function flatten(nodes: AdNodeDto[], path: string[] = []): Array<Array<string | 
 
 /**
  * Meta ads against the shop's own orders: spend and attributed revenue per
- * day, and campaign → ad set → ad.
+ * day, campaign → ad set → ad, and ad traffic and orders by city.
  */
 export default async function MarketingAnalyticsPage({
   searchParams,
@@ -168,6 +169,19 @@ export default async function MarketingAnalyticsPage({
         ) : (
           <AdTree campaigns={data.campaigns} />
         )}
+      </AnalyticsCard>
+
+      <AnalyticsCard
+        title="Meta ads by city"
+        subtitle="Sessions from Meta ads by the delivery area the shopper chose; orders from Meta ads by the city they were delivered to. Meta only reports spend down to state, so spend is not split by city."
+        actions={
+          <CityCsvButton
+            rows={data.cities}
+            filename={`meta-ads-cities-${period.from}-to-${period.to}`}
+          />
+        }
+      >
+        <CityTable rows={data.cities} empty="No sessions or orders from Meta ads in this period." />
       </AnalyticsCard>
     </AnalyticsShell>
   );

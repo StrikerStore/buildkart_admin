@@ -1,6 +1,7 @@
 import type { Metadata } from 'next';
 import { formatINR } from '@StrikerStore/contract';
 import { AnalyticsCard, AnalyticsShell } from '@/components/analytics/AnalyticsShell';
+import { CityCsvButton, CityTable } from '@/components/analytics/CityTable';
 import { CsvButton } from '@/components/analytics/CsvButton';
 import {
   Table,
@@ -17,11 +18,12 @@ import { percent, readAnalyticsQuery } from '@/lib/analytics-query';
 export const metadata: Metadata = { title: 'Acquisition · Analytics' };
 
 /**
- * Where visitors and orders came from, by channel, source and medium — and
- * which landing pages turn visits into orders.
+ * Where visitors and orders came from, by channel, source and medium, and by
+ * city — and which landing pages turn visits into orders.
  *
- * Sessions are read from the raw session table, which keeps 90 days; a period
- * reaching further back says so rather than showing a quietly short count.
+ * Sessions by source are read from the raw session table, which keeps 90 days;
+ * a period reaching further back says so rather than showing a quietly short
+ * count. Cities come from the daily summary, which is kept for good.
  */
 export default async function AcquisitionPage({
   searchParams,
@@ -37,8 +39,8 @@ export default async function AcquisitionPage({
     <AnalyticsShell active="/analytics/acquisition" query={query} period={period}>
       {!data.sessionsComplete && (
         <p className="rounded-md bg-[var(--warning-bg)] px-3 py-2 text-xs text-[var(--warning-fg)]">
-          Sessions are kept for 90 days, so session counts here cover only the last 90 days of this
-          period. Orders and revenue cover all of it.
+          Sessions are kept for 90 days, so session counts by source and landing page cover only the
+          last 90 days of this period. Cities, orders and revenue cover all of it.
         </p>
       )}
 
@@ -116,6 +118,16 @@ export default async function AcquisitionPage({
             </TableBody>
           </Table>
         )}
+      </AnalyticsCard>
+
+      <AnalyticsCard
+        title="Cities"
+        subtitle="Sessions by the delivery area the shopper chose on the website; orders by the city they were delivered to. Not chosen is everyone who has not picked an area yet. Top 50 cities."
+        actions={
+          <CityCsvButton rows={data.cities} filename={`cities-${period.from}-to-${period.to}`} />
+        }
+      >
+        <CityTable rows={data.cities} empty="Nothing recorded in this period." />
       </AnalyticsCard>
 
       <AnalyticsCard
