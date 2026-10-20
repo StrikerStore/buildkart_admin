@@ -10,7 +10,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { CustomerFilters } from '@/components/customers/CustomerFilters';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requirePermission } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
 import { cn } from '@/lib/utils';
 
@@ -21,7 +21,7 @@ export default async function CustomersPage({
 }: {
   searchParams: Promise<Record<string, string | string[] | undefined>>;
 }) {
-  await requireAdmin();
+  await requirePermission('customers:read');
 
   const raw = await searchParams;
   const parsed = customerListQuerySchema.safeParse({

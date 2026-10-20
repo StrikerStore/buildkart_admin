@@ -40,12 +40,29 @@ export default async function DashboardLayout({ children }: { children: React.Re
  * not start swallowing a ForbiddenError on every page.
  */
 async function navBadges(role: Parameters<typeof can>[0]): Promise<NavBadges> {
-  if (!can(role, 'support:read')) return {};
-
+  let client: Awaited<ReturnType<typeof api>>;
   try {
-    return { support: await (await api()).support.awaitingCount.query() };
+    client = await api();
   } catch (error) {
-    console.error('[nav] could not read the support count', error);
+    console.error('[nav] could not reach the API for badge counts', error);
     return {};
   }
+  const [support, privacy] = await Promise.all([
+    can(role, 'support:read')
+      ? client.support.awaitingCount.query().catch((error: unknown) => {
+          console.error('[nav] could not read the support count', error);
+          return undefined;
+        })
+      : undefined,
+    can(role, 'privacy:manage')
+      ? client.privacy.openCount.query().catch((error: unknown) => {
+          console.error('[nav] could not read the privacy count', error);
+          return undefined;
+        })
+      : undefined,
+  ]);
+  return {
+    ...(support !== undefined ? { support } : {}),
+    ...(privacy !== undefined ? { privacy } : {}),
+  };
 }

@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { PlusIcon } from 'lucide-react';
+import { DownloadIcon, PlusIcon } from 'lucide-react';
 import {
   WALLET_ENTRY_LABELS,
   can,
@@ -14,7 +14,7 @@ import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { OrderStatusBadge, PaymentStatusBadge } from '@/components/orders/OrderStatusBadge';
 import { CustomerDetailForm } from '@/components/customers/CustomerDetailForm';
 import { WalletAdjustDialog } from '@/components/customers/WalletAdjustDialog';
-import { getCurrentAdmin, requireAdmin } from '@/lib/auth/requireAdmin';
+import { getCurrentAdmin, requirePermission } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
 import { adminMap } from '@/lib/maps';
 import { PinEmbed } from '@/components/maps/PinEmbed';
@@ -54,7 +54,8 @@ function Stat({ label, value }: { label: string; value: string }) {
 }
 
 export default async function CustomerDetailPage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  // Opening this page is logged (`pii.view.customer`) by the read behind it.
+  await requirePermission('customers:read');
   const { id } = await params;
 
   const client = await api();
@@ -66,6 +67,7 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
   ]);
   if (!customer) notFound();
   const canAdjustWallet = admin ? can(admin.role, 'wallet:write') : false;
+  const canManagePrivacy = admin ? can(admin.role, 'privacy:manage') : false;
 
   return (
     <PageContainer>
@@ -286,6 +288,13 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
             />
           </Card>
 
+          {customer.erasedAt && (
+            <p className="rounded-md bg-[var(--warning-bg)] px-3 py-2 text-sm text-[var(--warning-fg)]">
+              Erased on {formatStoreDate(customer.erasedAt)} at their request. Their orders and
+              invoices are kept as tax law requires; everything else about them is gone.
+            </p>
+          )}
+
           {/*
             * What the customer agreed to. Read-only on purpose: under the DPDP
             * Act a consent has to be the customer's own, so only they change
@@ -306,6 +315,15 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               Only the customer can change these, from their account settings or the website&apos;s
               Privacy choices.
             </p>
+            {canManagePrivacy && (
+              <a
+                href={`/api/privacy/export/${customer.id}`}
+                className="inline-flex w-fit items-center gap-1.5 text-sm font-medium hover:underline"
+              >
+                <DownloadIcon className="size-4" />
+                Download their data
+              </a>
+            )}
           </Card>
         </div>
       </div>

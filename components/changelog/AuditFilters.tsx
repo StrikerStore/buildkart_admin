@@ -29,6 +29,8 @@ const GROUP_LABELS: Record<string, string> = {
   media: 'Media',
   metafield: 'Custom fields',
   order: 'Orders',
+  pii: 'Records opened',
+  privacy: 'Privacy',
   product: 'Products',
   rates: 'Rates',
   settings: 'Settings',

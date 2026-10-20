@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useRef, useState, useTransition } from 'react';
+import { useCallback, useEffect, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import { AlertCircleIcon, EyeIcon, EyeOffIcon, LoaderCircleIcon } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { login, type LoginFailureKind } from './actions';
+import { SecondStep } from './SecondStep';
 
 /**
  * Only accepts same-origin paths. Without this check, `?next=https://evil.example`
@@ -36,7 +37,21 @@ export function LoginForm({ next }: { next?: string }) {
   const [failure, setFailure] = useState<Failure | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [passwordVisible, setPasswordVisible] = useState(false);
+  // After a right password, an account with two-step sign-in has one more step.
+  const [step, setStep] = useState<'password' | 'totp' | 'enrol'>('password');
   const alertRef = useRef<HTMLDivElement>(null);
+
+  const enter = useCallback(() => {
+    // The session cookie was set server-side; refresh so the proxy sees it.
+    router.replace(safeRedirect(next));
+    router.refresh();
+  }, [router, next]);
+
+  // Stable, because the second step starts its setup in an effect keyed on it.
+  const restart = useCallback((message: string | null) => {
+    setStep('password');
+    setFailure(message ? { kind: 'expired', message } : null);
+  }, []);
 
   /**
    * Focus moves to the alert; `role="alert"` alone is not enough.
@@ -95,11 +110,12 @@ export function LoginForm({ next }: { next?: string }) {
         return;
       }
 
-      // The session cookie was set server-side; refresh so the proxy sees it.
-      router.replace(safeRedirect(next));
-      router.refresh();
+      if (result.next === 'done') enter();
+      else setStep(result.next);
     });
   }
+
+  if (step !== 'password') return <SecondStep mode={step} onDone={enter} onRestart={restart} />;
 
   return (
     <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate aria-busy={isPending}>

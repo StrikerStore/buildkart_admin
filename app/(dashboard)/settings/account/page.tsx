@@ -3,6 +3,7 @@ import { formatStoreDateTime } from '@StrikerStore/contract';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { ProfileForm, PasswordForm } from '@/components/settings/AccountForms';
+import { TwoFactorCard } from '@/components/settings/TwoFactorCard';
 import { requireAdmin } from '@/lib/auth/requireAdmin';
 
 export const metadata: Metadata = { title: 'Account' };
@@ -74,7 +75,7 @@ export default async function AccountSettingsPage() {
             <ReadOnly
               label="Signed in"
               value={account.lastLoginAt ? formatStoreDateTime(account.lastLoginAt) : '—'}
-              hint="When this session began."
+              hint="When this session began. Sessions last a day."
             />
           </div>
 
@@ -83,6 +84,13 @@ export default async function AccountSettingsPage() {
 
         <Card title="Password" subtitle="Changing it signs out every other device immediately.">
           <PasswordForm />
+        </Card>
+
+        <Card
+          title="Two-step sign-in"
+          subtitle="A code from an app on your phone, after the password — so a leaked password alone does not open the admin."
+        >
+          <TwoFactorCard status={account.twoFactor} />
         </Card>
       </div>
     </PageContainer>

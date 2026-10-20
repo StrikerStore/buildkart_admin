@@ -12,6 +12,7 @@ import {
   LifeBuoyIcon,
   HistoryIcon,
   SettingsIcon,
+  ShieldCheckIcon,
   TrendingUpIcon,
   type LucideIcon,
 } from 'lucide-react';
@@ -30,7 +31,7 @@ export type NavChild = {
  * sidebar a `{ support: 3 }` map; a key with no entry, or a zero, renders
  * nothing — a badge showing "0" is a worse answer than no badge.
  */
-export type NavBadgeKey = 'support';
+export type NavBadgeKey = 'support' | 'privacy';
 
 export type NavItem = {
   label: string;
@@ -95,7 +96,25 @@ export const NAV_ITEMS: NavItem[] = [
     ],
   },
   { label: 'Media', href: '/media', icon: ImageIcon },
-  { label: 'Customers', href: '/customers', icon: UsersIcon },
+  { label: 'Customers', href: '/customers', icon: UsersIcon, permission: 'customers:read' },
+  /*
+   * Requests about customers' own data, with a legal deadline each — beside
+   * Customers because every one is about a customer, and badged because a
+   * request nobody noticed is the one that misses its 90 days.
+   */
+  {
+    label: 'Privacy',
+    href: '/privacy',
+    icon: ShieldCheckIcon,
+    permission: 'privacy:manage',
+    badgeKey: 'privacy',
+    // Incidents is a sibling root rather than `/privacy/incidents`: a child
+    // nested under its parent's href would light both rows at once.
+    children: [
+      { label: 'Requests', href: '/privacy' },
+      { label: 'Incidents', href: '/incidents' },
+    ],
+  },
   /*
    * Beside Customers, and above Discounts, because it is the only item in this
    * list where somebody is waiting. Distinct from Messages below, which is
@@ -107,7 +126,7 @@ export const NAV_ITEMS: NavItem[] = [
    * light both rows up at once, and the only other page here is one the owner
    * visits from the screen where they noticed they were retyping something.
    */
-  { label: 'Support', href: '/support', icon: LifeBuoyIcon, badgeKey: 'support' },
+  { label: 'Support', href: '/support', icon: LifeBuoyIcon, badgeKey: 'support', permission: 'support:read' },
   {
     label: 'Discounts',
     href: '/discounts',
