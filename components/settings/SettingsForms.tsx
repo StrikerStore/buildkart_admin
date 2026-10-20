@@ -9,7 +9,11 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
-import { saveCommerceSettings, saveStoreSettings } from '@/app/(dashboard)/settings/actions';
+import {
+  saveCommerceSettings,
+  savePrivacyContact,
+  saveStoreSettings,
+} from '@/app/(dashboard)/settings/actions';
 
 function Field({
   label,
@@ -33,6 +37,85 @@ function Field({
       ) : (
         hint && <span className="text-muted-foreground text-xs">{hint}</span>
       )}
+    </div>
+  );
+}
+
+/**
+ * The grievance officer: the person who answers questions about customers'
+ * personal data, published on the storefront's help page and filled into the
+ * Privacy Notice (DPDP Rules 2025, rule 9).
+ */
+export function PrivacyContactForm({
+  initial,
+}: {
+  initial: {
+    name: string;
+    designation: string;
+    email: string;
+    phone: string;
+    address: string;
+    responseDays: number;
+  };
+}) {
+  const router = useRouter();
+  const [form, setForm] = useState({ ...initial, responseDays: String(initial.responseDays) });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [isSaving, startSaving] = useTransition();
+
+  function save() {
+    setErrors({});
+    startSaving(async () => {
+      const result = await savePrivacyContact(form);
+      if (!result.ok) {
+        setErrors(result.fieldErrors);
+        toast.error(result.formErrors[0] ?? 'Check the highlighted fields.');
+        return;
+      }
+      toast.success('Grievance officer saved');
+      router.refresh();
+    });
+  }
+
+  const set = (key: keyof typeof form) => (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
+    setForm((current) => ({ ...current, [key]: event.target.value }));
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="grid gap-3 sm:grid-cols-2">
+        <Field label="Name" htmlFor="officerName" error={errors.name} hint="A real person who reads this inbox.">
+          <Input id="officerName" value={form.name} onChange={set('name')} />
+        </Field>
+        <Field label="Title" htmlFor="officerDesignation" error={errors.designation}>
+          <Input id="officerDesignation" value={form.designation} onChange={set('designation')} />
+        </Field>
+        <Field label="Email" htmlFor="officerEmail" error={errors.email}>
+          <Input id="officerEmail" value={form.email} onChange={set('email')} inputMode="email" />
+        </Field>
+        <Field label="Phone" htmlFor="officerPhone" error={errors.phone}>
+          <Input id="officerPhone" value={form.phone} onChange={set('phone')} inputMode="tel" />
+        </Field>
+        <Field
+          label="Reply within (days)"
+          htmlFor="officerDays"
+          error={errors.responseDays}
+          hint="What the site promises. The law allows at most 90."
+        >
+          <Input
+            id="officerDays"
+            value={form.responseDays}
+            onChange={set('responseDays')}
+            inputMode="numeric"
+          />
+        </Field>
+      </div>
+      <Field label="Postal address" htmlFor="officerAddress" error={errors.address}>
+        <Textarea id="officerAddress" value={form.address} onChange={set('address')} rows={3} />
+      </Field>
+      <Button type="button" className="self-start" disabled={isSaving} onClick={save}>
+        {isSaving ? <LoaderCircleIcon className="size-4 animate-spin" /> : <CheckIcon className="size-4" />}
+        Save
+      </Button>
     </div>
   );
 }

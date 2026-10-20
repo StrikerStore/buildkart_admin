@@ -430,7 +430,8 @@ export function MetaMarketingForm({ data }: { data: MetaMarketingDto }) {
             <span className="text-muted-foreground text-xs">
               Sends orders you enter in the admin to Meta as offline conversions (phone call), with
               the customer&apos;s phone number hashed — so ads that make the phone ring get credit.
-              Needs the Conversions API above.
+              Only for customers who said yes to ad measurement on the storefront. Needs the
+              Conversions API above.
             </span>
           </span>
           <Switch
@@ -440,22 +441,19 @@ export function MetaMarketingForm({ data }: { data: MetaMarketingDto }) {
           />
         </label>
 
-        <label className="flex items-start justify-between gap-4">
-          <span className="flex flex-col gap-0.5">
-            <span className="text-sm font-medium">Ask visitors before Meta tracking</span>
-            <span className="text-muted-foreground text-xs">
-              Shows a short Allow / Don&apos;t allow banner on the storefront. The Meta Pixel sends
-              nothing until a visitor allows it, and a visitor who declines is left out of the
-              server-side events too. The shop&apos;s own analytics are not affected. Mention Meta in
-              your privacy policy either way.
-            </span>
+        {/*
+          * No longer a switch. Under the DPDP Act the storefront always asks,
+          * and that is not the owner's to turn off.
+          */}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-sm font-medium">Visitor consent</span>
+          <span className="text-muted-foreground text-xs">
+            The storefront always asks each visitor, separately, about site analytics and about Meta
+            ad measurement. The Meta Pixel does not load, and nothing is sent to the Conversions
+            API, for anyone who has not said yes. Visitors change their answer from the footer&apos;s
+            &ldquo;Privacy choices&rdquo; or their account settings.
           </span>
-          <Switch
-            checked={form.consentBanner}
-            onCheckedChange={(v) => set('consentBanner', v)}
-            className="mt-1 shrink-0"
-          />
-        </label>
+        </div>
 
         <Button type="button" className="self-start" disabled={isSaving} onClick={save}>
           {isSaving ? (

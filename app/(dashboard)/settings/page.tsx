@@ -3,7 +3,11 @@ import Link from 'next/link';
 import { CreditCardIcon, KeyRoundIcon, MegaphoneIcon, PercentIcon } from 'lucide-react';
 import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
-import { CommerceSettingsForm, StoreProfileForm } from '@/components/settings/SettingsForms';
+import {
+  CommerceSettingsForm,
+  PrivacyContactForm,
+  StoreProfileForm,
+} from '@/components/settings/SettingsForms';
 import { getCurrentAdmin, requirePermission } from '@/lib/auth/requireAdmin';
 import { can } from '@StrikerStore/contract';
 
@@ -33,7 +37,7 @@ export default async function SettingsPage() {
   await requirePermission('settings:write');
 
   const admin = await getCurrentAdmin();
-  const { store, commerce } = await (await api()).content.settings.query();
+  const { store, commerce, privacy } = await (await api()).content.settings.query();
 
 
   // Payments sit behind their own permission, so the card is only offered to
@@ -57,6 +61,13 @@ export default async function SettingsPage() {
       <div className="flex flex-col gap-4">
         <Card title="Store details" subtitle="Printed on order slips and shown on the storefront.">
           <StoreProfileForm initial={store} />
+        </Card>
+
+        <Card
+          title="Grievance officer"
+          subtitle="Who answers customers' questions and complaints about their personal data. Shown on the website's help page and in the Privacy Notice, as the DPDP Act requires."
+        >
+          <PrivacyContactForm initial={privacy} />
         </Card>
 
         <Card

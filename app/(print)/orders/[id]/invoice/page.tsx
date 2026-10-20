@@ -11,7 +11,7 @@ import {
   PAYMENT_STATUS_LABELS,
   totalPayments,
 } from '@StrikerStore/contract';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requirePermission } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
 import { PrintButton } from '@/components/orders/PrintButton';
 
@@ -34,7 +34,7 @@ export async function generateMetadata({
  * for — even if the product has since been renamed, repriced or archived.
  */
 export default async function InvoicePage({ params }: { params: Promise<{ id: string }> }) {
-  await requireAdmin();
+  await requirePermission('orders:read');
   const { id } = await params;
   const client = await api();
 

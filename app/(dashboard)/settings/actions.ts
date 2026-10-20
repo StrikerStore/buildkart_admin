@@ -14,6 +14,14 @@ export async function saveStoreSettings(input: unknown): Promise<ActionResult<vo
   return result;
 }
 
+export async function savePrivacyContact(input: unknown): Promise<ActionResult<void>> {
+  const result = await (await api()).content.savePrivacyContact.mutate(input);
+  // The help page and the Privacy Notice render it; the storefront reads
+  // settings per request, so only this screen needs refreshing.
+  if (result.ok) revalidatePath('/settings');
+  return result;
+}
+
 export async function saveCommerceSettings(input: unknown): Promise<ActionResult<void>> {
   const result = await (await api()).content.saveCommerceSettings.mutate(input);
   if (result.ok) {

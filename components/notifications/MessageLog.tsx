@@ -23,6 +23,7 @@ const STATUS_WORDS: Record<NotificationMessageDto['status'], string> = {
 
 const SKIP_WORDS: Record<string, string> = {
   opted_out: 'Customer turned off WhatsApp updates',
+  no_marketing_consent: 'Customer has not said yes to offers on WhatsApp',
   invalid_number: 'Not a valid mobile number',
 };
 

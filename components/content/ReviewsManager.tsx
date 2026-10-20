@@ -30,6 +30,7 @@ import {
   type CustomerReviewDto,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
@@ -75,6 +76,8 @@ const EMPTY = {
   /** 0 until chosen, so an untouched form cannot quietly post five stars. */
   rating: 0,
   isActive: true,
+  /** Unticked until the owner confirms it — never assumed. */
+  publishConsent: false,
 };
 
 function StarRow({ rating }: { rating: number }) {
@@ -229,6 +232,9 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
       customerPhone: row.customerPhone ?? '',
       rating: row.rating,
       isActive: row.isActive,
+      // Already recorded stays ticked; a review from before consent was
+      // recorded asks for it on its next save.
+      publishConsent: row.publishConsentAt !== null,
     });
     setMedia(
       row.media.map((item) => ({
@@ -419,6 +425,11 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
                       </span>
                     )}
                     <StarRow rating={row.rating} />
+                    {!row.publishConsentAt && (
+                      <span className="rounded-full bg-[var(--warning-bg)] px-1.5 py-px text-[11px] font-medium text-[var(--warning-fg)]">
+                        No consent recorded
+                      </span>
+                    )}
                   </span>
                   <span className="text-muted-foreground mt-0.5 block text-xs">
                     {mediaSummary(row)} · Posted {formatStoreDate(row.createdAt)}
@@ -430,7 +441,11 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
                     checked={row.isActive}
                     onCheckedChange={(next) =>
                       startSaving(async () => {
-                        await setCustomerReviewActive({ id: row.id, isActive: next });
+                        const result = await setCustomerReviewActive({ id: row.id, isActive: next });
+                        if (!result.ok) {
+                          toast.error(result.formErrors[0] ?? 'Could not change that.');
+                          return;
+                        }
                         router.refresh();
                       })
                     }
@@ -645,6 +660,27 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
             </div>
           </div>
 
+          {/*
+            * The customer's agreement, recorded by the person who asked them.
+            * A review is their personal data — name, words, photos — and
+            * putting it on the site needs their yes (DPDP Act §6).
+            */}
+          <label className="flex items-start gap-2 border-t pt-3">
+            <Checkbox
+              checked={form.publishConsent}
+              onCheckedChange={(v) => setForm((c) => ({ ...c, publishConsent: v === true }))}
+              className="mt-0.5"
+            />
+            <span className="flex flex-col gap-0.5">
+              <span className="font-medium">The customer agreed to have this shown on the site</span>
+              <span className="text-muted-foreground text-xs">
+                Their name, rating and these photos or videos, on the home page. Ask before posting,
+                and remove it if they change their mind.
+              </span>
+              {error('publishConsent')}
+            </span>
+          </label>
+
           <label className="flex items-center justify-between gap-4 border-t pt-3">
             <span className="font-medium">Showing on the website</span>
             <Switch
@@ -659,7 +695,7 @@ export function ReviewsManager({ rows, ctx }: { rows: CustomerReviewDto[]; ctx: 
             </Button>
             <Button
               type="button"
-              disabled={isSaving || isUploading || media.length === 0}
+              disabled={isSaving || isUploading || media.length === 0 || !form.publishConsent}
               onClick={save}
             >
               {(isSaving || isUploading) && <LoaderCircleIcon className="size-4 animate-spin" />}

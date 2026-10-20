@@ -11,7 +11,7 @@ import {
   type ShipmentStatus,
   type SettingValue,
 } from '@StrikerStore/contract';
-import { requireAdmin } from '@/lib/auth/requireAdmin';
+import { requirePermission } from '@/lib/auth/requireAdmin';
 import { api } from '@/lib/api/server';
 import { PrintButton } from '@/components/orders/PrintButton';
 
@@ -59,7 +59,7 @@ export default async function ChallanPage({
   params: Promise<{ id: string }>;
   searchParams: Promise<{ copies?: string; delivery?: string }>;
 }) {
-  await requireAdmin();
+  await requirePermission('orders:read');
   const [{ id }, query] = await Promise.all([params, searchParams]);
   const client = await api();
 

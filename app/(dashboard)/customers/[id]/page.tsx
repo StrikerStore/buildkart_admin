@@ -38,6 +38,12 @@ function Card({ title, children }: { title?: string; children: React.ReactNode }
   );
 }
 
+/** Yes, no, or not asked yet — never a guess. */
+function answer(value: boolean | null): string {
+  if (value === null) return 'Not answered';
+  return value ? 'Yes' : 'No';
+}
+
 function Stat({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -278,6 +284,28 @@ export default async function CustomerDetailPage({ params }: { params: Promise<{
               whatsappOptIn={customer.whatsappOptIn}
               whatsappOptOutAt={customer.whatsappOptOutAt}
             />
+          </Card>
+
+          {/*
+            * What the customer agreed to. Read-only on purpose: under the DPDP
+            * Act a consent has to be the customer's own, so only they change
+            * these — from their account or the cookie banner.
+            */}
+          <Card title="Privacy">
+            <dl className="grid grid-cols-[1fr_auto] gap-x-4 gap-y-1.5 text-sm">
+              <dt className="text-muted-foreground">Offers on WhatsApp</dt>
+              <dd>{customer.whatsappMarketing ? 'Yes' : 'No'}</dd>
+              <dt className="text-muted-foreground">Site analytics</dt>
+              <dd>{answer(customer.analyticsConsent)}</dd>
+              <dt className="text-muted-foreground">Meta ad measurement</dt>
+              <dd>{answer(customer.adsConsent)}</dd>
+              <dt className="text-muted-foreground">Said they are 18 or older</dt>
+              <dd>{customer.ageConfirmedAt ? formatStoreDate(customer.ageConfirmedAt) : 'Not yet'}</dd>
+            </dl>
+            <p className="text-muted-foreground text-xs">
+              Only the customer can change these, from their account settings or the website&apos;s
+              Privacy choices.
+            </p>
           </Card>
         </div>
       </div>
