@@ -15,10 +15,14 @@ import { toast } from 'sonner';
 import {
   canFulfil,
   defaultInstrumentFor,
+  deliveryFeeFor,
+  distanceAdditionFor,
   formatINR,
   fromTierDtos,
   gatewaysForMethod,
   priceOrder,
+  subtractMoney,
+  type DeliveryChargesDto,
   referenceLabelFor,
   PAYMENT_GATEWAY_LABELS,
   PAYMENT_METHODS,
@@ -119,7 +123,8 @@ export function NewOrderForm() {
   const [deliveryCharge, setDeliveryCharge] = useState('');
   const [discountTotal, setDiscountTotal] = useState('');
   const [discountCode, setDiscountCode] = useState('');
-  const [freeAbove, setFreeAbove] = useState<string | null>(null);
+  /** The shop's delivery rules, while the pincode is one it delivers to. */
+  const [rules, setRules] = useState<DeliveryChargesDto | null>(null);
 
   // --- the rest ------------------------------------------------------------
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>('COD');
@@ -158,20 +163,21 @@ export function NewOrderForm() {
   useEffect(() => {
     if (!/^\d{6}$/.test(address.pincode)) {
       setAreaNote(null);
-      setFreeAbove(null);
+      setRules(null);
       return;
     }
     const timer = setTimeout(async () => {
       const result = await lookupPincode(address.pincode);
       if (!result.ok) return;
       if (result.data.serviced) {
-        setAreaNote(`${result.data.areaName} · delivery ${formatINR(result.data.deliveryCharge)}`);
-        setFreeAbove(result.data.freeAbove);
-        if (deliveryCharge === '') setDeliveryCharge(result.data.deliveryCharge);
+        setAreaNote(result.data.areaName);
+        setRules(result.data.rules);
         if (address.city === '') setAddress((a) => ({ ...a, city: 'Indore' }));
       } else {
-        setAreaNote('Not a listed delivery area — the order can still be taken.');
-        setFreeAbove(null);
+        setAreaNote(
+          'Not a listed delivery area — the order can still be taken, with no delivery charge unless you type one.',
+        );
+        setRules(null);
       }
     }, 400);
     return () => clearTimeout(timer);
@@ -189,42 +195,74 @@ export function NewOrderForm() {
   }, [search]);
 
   /*
+   * The counter has no map pin, so a distance-priced product is shown at its
+   * warehouse-gate price (0 km) — what the server will charge too — and the
+   * operator types a rate for a far delivery. A blank delivery charge is the
+   * shop's rule, worked out the way the server will: the flat-priced lines, at
+   * 0 km, in an area the shop delivers to.
+   */
+  const shopRule = useMemo(() => {
+    if (lines.length === 0) return null;
+    try {
+      const orderLines = lines.map((line) => ({
+        variantId: line.variant.variantId,
+        quantity: line.quantity,
+        unitPriceOverride: line.override.trim() === '' ? undefined : line.override.trim(),
+      }));
+      const catalog = lines.map((line) => ({
+        variantId: line.variant.variantId,
+        price: line.variant.price,
+        tiers: fromTierDtos(line.variant.tiers),
+        // Carried through from the variant search. Without these the preview
+        // would silently disagree with the server for any exclusive-priced
+        // product — the exact divergence sharing `priceOrder` prevents.
+        taxPercent: line.variant.taxPercent,
+        taxInclusive: line.variant.taxInclusive,
+        taxable: line.variant.taxable,
+        distanceAddition:
+          line.variant.pricingKind === 'DISTANCE'
+            ? distanceAdditionFor(0, {
+                baseAddition: line.variant.distanceBaseAddition,
+                blockKm: line.variant.distanceBlockKm,
+                perBlockAddition: line.variant.distancePerBlockAddition,
+              })
+            : '0.00',
+      }));
+      const discount = discountTotal.trim() === '' ? undefined : discountTotal.trim();
+      const hasFlat = lines.some((line) => line.variant.pricingKind === 'FLAT');
+      const probe = priceOrder(orderLines, catalog, {});
+      const fee =
+        rules && hasFlat
+          ? deliveryFeeFor({
+              cartTotal: subtractMoney(probe.subtotal, discount ?? '0.00'),
+              metres: 0,
+              rules,
+            }).charge
+          : '0.00';
+      return { orderLines, catalog, discount, fee };
+    } catch {
+      return null;
+    }
+  }, [lines, discountTotal, rules]);
+
+  /*
    * Priced with the very same function the server uses, so the total on screen
    * is the total that will be charged. The server still recomputes it from the
    * catalogue — this is a preview, never the source of the figure.
    */
   const preview = useMemo(() => {
-    if (lines.length === 0) return null;
+    if (!shopRule) return null;
     try {
-      return priceOrder(
-        lines.map((line) => ({
-          variantId: line.variant.variantId,
-          quantity: line.quantity,
-          unitPriceOverride: line.override.trim() === '' ? undefined : line.override.trim(),
-        })),
-        lines.map((line) => ({
-          variantId: line.variant.variantId,
-          price: line.variant.price,
-          tiers: fromTierDtos(line.variant.tiers),
-          // Carried through from the variant search. Without these the preview
-          // would silently disagree with the server for any exclusive-priced
-          // product — the exact divergence sharing `priceOrder` prevents.
-          taxPercent: line.variant.taxPercent,
-          taxInclusive: line.variant.taxInclusive,
-          taxable: line.variant.taxable,
-        })),
-        {
-            deliveryCharge: deliveryCharge.trim() === '' ? '0.00' : deliveryCharge.trim(),
-          discountTotal: discountTotal.trim() === '' ? undefined : discountTotal.trim(),
-          freeDeliveryAbove: freeAbove,
-        },
-      );
+      return priceOrder(shopRule.orderLines, shopRule.catalog, {
+        deliveryCharge: deliveryCharge.trim() === '' ? shopRule.fee : deliveryCharge.trim(),
+        discountTotal: shopRule.discount,
+      });
     } catch {
       // A half-typed price is not an error worth shouting about; the summary
       // simply waits until the numbers make sense again.
       return null;
     }
-  }, [lines, deliveryCharge, discountTotal, freeAbove]);
+  }, [shopRule, deliveryCharge]);
 
   function addLine(variant: VariantSearchResult) {
     setLines((current) => {
@@ -378,6 +416,11 @@ export function NewOrderForm() {
                       {short && (
                         <span className="block text-xs text-[var(--critical-fg)]">
                           Only {line.variant.stockQty} in stock
+                        </span>
+                      )}
+                      {line.variant.pricingKind === 'DISTANCE' && line.override.trim() === '' && (
+                        <span className="text-muted-foreground block text-xs">
+                          Priced by distance — this is the 0 km rate. Type a rate for a far delivery.
                         </span>
                       )}
                     </span>
@@ -635,9 +678,15 @@ export function NewOrderForm() {
                 value={deliveryCharge}
                 onChange={(e) => setDeliveryCharge(e.target.value)}
                 inputMode="decimal"
-                placeholder="0.00"
+                placeholder={shopRule ? shopRule.fee : '0.00'}
                 className="tabular"
               />
+              {deliveryCharge.trim() === '' && shopRule && (
+                <span className="text-muted-foreground text-xs">
+                  Shop rule: {shopRule.fee === '0.00' ? 'free' : formatINR(shopRule.fee)}
+                  {rules ? ', measured at 0 km' : ''}. Type a figure to charge something else.
+                </span>
+              )}
             </Field>
 
             {/* Only the added tax is its own line — tax already inside the

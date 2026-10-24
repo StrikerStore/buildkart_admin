@@ -64,8 +64,8 @@ export async function saveWarehouseStock(
   return result;
 }
 
-export async function saveDistancePricing(input: unknown): Promise<ActionResult<void>> {
-  const result = await (await api()).operations.saveDistancePricing.mutate(input);
+export async function saveDeliveryCharges(input: unknown): Promise<ActionResult<void>> {
+  const result = await (await api()).operations.saveDeliveryCharges.mutate(input);
   if (result.ok) revalidateWarehouses();
   return result;
 }

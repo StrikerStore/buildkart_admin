@@ -18,6 +18,7 @@ import {
   matchesTagRules,
   type BulkTierBasis,
   type OptionAxisDraft,
+  type PricingKind,
   type RuleCategoryDto,
   type VariantDraft,
 } from '@StrikerStore/contract';
@@ -44,6 +45,7 @@ import { TagInput } from './TagInput';
 import { BrandInput } from './BrandInput';
 import type { TaxRateDto } from '@StrikerStore/contract';
 import { TaxSection, type TaxState } from './TaxSection';
+import { DeliveryPricingSection, type DeliveryPricingState } from './DeliveryPricingSection';
 import { InventorySection, PricingSection } from './PricingSection';
 import { MetafieldFieldset, type MetafieldDefinitionDto } from './MetafieldFieldset';
 import { OptionAxisEditor } from './OptionAxisEditor';
@@ -78,6 +80,10 @@ export type ProductFormInitial = {
   hsnCode: string;
   isRateVolatile: boolean;
   bulkTierBasis: BulkTierBasis;
+  pricingKind: PricingKind;
+  distanceBaseAddition: string;
+  distanceBlockKm: string;
+  distancePerBlockAddition: string;
   searchKeywords: string;
   seoTitle: string;
   seoDescriptionEn: string;
@@ -175,6 +181,12 @@ export function ProductForm({
     hsnCode: initial.hsnCode,
   }));
   const [isRateVolatile, setIsRateVolatile] = useState(initial.isRateVolatile);
+  const [deliveryPricing, setDeliveryPricing] = useState<DeliveryPricingState>(() => ({
+    pricingKind: initial.pricingKind,
+    distanceBaseAddition: initial.distanceBaseAddition,
+    distanceBlockKm: initial.distanceBlockKm,
+    distancePerBlockAddition: initial.distancePerBlockAddition,
+  }));
   const [bulkTierBasis, setBulkTierBasis] = useState(initial.bulkTierBasis);
   const [searchKeywords, setSearchKeywords] = useState(initial.searchKeywords);
   const [seoTitle, setSeoTitle] = useState(initial.seoTitle);
@@ -332,6 +344,7 @@ export function ProductForm({
       hsnCode: tax.hsnCode,
       isRateVolatile,
       bulkTierBasis,
+      ...deliveryPricing,
       searchKeywords,
       seoTitle,
       seoDescriptionEn: seoDescription,
@@ -690,6 +703,17 @@ export function ProductForm({
               samplePrice={variants[0]?.price || null}
               fieldErrors={fieldErrors}
               onChange={(changes) => setTax((current) => ({ ...current, ...changes }))}
+            />
+
+            {/* Beside tax for the same reason tax sits beside pricing: what a
+                customer pays depends on it, and it belongs to the whole product. */}
+            <DeliveryPricingSection
+              value={deliveryPricing}
+              samplePrice={variants[0]?.price || null}
+              sampleCompareAt={variants[0]?.compareAtPrice || null}
+              unitLabel={variants[0]?.unitLabelEn || null}
+              fieldErrors={fieldErrors}
+              onChange={(changes) => setDeliveryPricing((current) => ({ ...current, ...changes }))}
             />
 
             {!hasVariants && (

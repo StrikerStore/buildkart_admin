@@ -240,6 +240,16 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                       {label && (
                         <span className="text-muted-foreground block truncate text-xs">{label}</span>
                       )}
+                      {/* What the distance added, frozen with the line: the
+                          price includes it, and this is the answer when a
+                          customer asks why theirs cost more than a neighbour's. */}
+                      {item.distanceAddition !== null && (
+                        <span className="text-muted-foreground block truncate text-xs">
+                          incl. {formatINR(item.distanceAddition)} distance
+                          {item.distanceKm !== null && ` · ${item.distanceKm} km`}
+                          {item.distanceWarehouseCode && ` · ${item.distanceWarehouseCode}`}
+                        </span>
+                      )}
                     </span>
 
                     <span className="text-muted-foreground tabular shrink-0 text-right text-xs">
@@ -279,6 +289,17 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                 />
               )}
               <TotalRow label="Delivery" value={formatINR(order.deliveryCharge)} muted />
+              {order.deliveryBreakdown && (
+                <p className="text-muted-foreground -mt-1 text-right text-xs">
+                  {order.deliveryBreakdown.free
+                    ? `Free — over ${formatINR(order.deliveryBreakdown.freeAbove ?? '0.00')}`
+                    : `${formatINR(order.deliveryBreakdown.slabBase)} by order value + ${formatINR(
+                        order.deliveryBreakdown.distanceCharge,
+                      )} for ${order.deliveryBreakdown.roadKm} km`}
+                  {order.deliveryBreakdown.warehouseCode && ` from ${order.deliveryBreakdown.warehouseCode}`}
+                  {order.deliveryBreakdown.waived && ' · waived by coupon'}
+                </p>
+              )}
               {order.unloadingCharge !== '0.00' && (
                 <TotalRow label="Unloading service" value={formatINR(order.unloadingCharge)} muted />
               )}
