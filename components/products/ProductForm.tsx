@@ -45,7 +45,7 @@ import { TagInput } from './TagInput';
 import { BrandInput } from './BrandInput';
 import type { TaxRateDto } from '@StrikerStore/contract';
 import { TaxSection, type TaxState } from './TaxSection';
-import { DeliveryPricingSection, type DeliveryPricingState } from './DeliveryPricingSection';
+import { DeliveryPricingSection } from './DeliveryPricingSection';
 import { InventorySection, PricingSection } from './PricingSection';
 import { MetafieldFieldset, type MetafieldDefinitionDto } from './MetafieldFieldset';
 import { OptionAxisEditor } from './OptionAxisEditor';
@@ -81,9 +81,6 @@ export type ProductFormInitial = {
   isRateVolatile: boolean;
   bulkTierBasis: BulkTierBasis;
   pricingKind: PricingKind;
-  distanceBaseAddition: string;
-  distanceBlockKm: string;
-  distancePerBlockAddition: string;
   searchKeywords: string;
   seoTitle: string;
   seoDescriptionEn: string;
@@ -181,12 +178,8 @@ export function ProductForm({
     hsnCode: initial.hsnCode,
   }));
   const [isRateVolatile, setIsRateVolatile] = useState(initial.isRateVolatile);
-  const [deliveryPricing, setDeliveryPricing] = useState<DeliveryPricingState>(() => ({
-    pricingKind: initial.pricingKind,
-    distanceBaseAddition: initial.distanceBaseAddition,
-    distanceBlockKm: initial.distanceBlockKm,
-    distancePerBlockAddition: initial.distancePerBlockAddition,
-  }));
+  // The product's kind; the figures it prices by travel on each variant draft.
+  const [pricingKind, setPricingKind] = useState<PricingKind>(initial.pricingKind);
   const [bulkTierBasis, setBulkTierBasis] = useState(initial.bulkTierBasis);
   const [searchKeywords, setSearchKeywords] = useState(initial.searchKeywords);
   const [seoTitle, setSeoTitle] = useState(initial.seoTitle);
@@ -344,7 +337,7 @@ export function ProductForm({
       hsnCode: tax.hsnCode,
       isRateVolatile,
       bulkTierBasis,
-      ...deliveryPricing,
+      pricingKind,
       searchKeywords,
       seoTitle,
       seoDescriptionEn: seoDescription,
@@ -370,6 +363,9 @@ export function ProductForm({
         barcode: v.barcode,
         imageMediaId: v.imageMediaId,
         isActive: v.isActive,
+        distanceBaseAddition: v.distanceBaseAddition,
+        distanceBlockKm: v.distanceBlockKm,
+        distancePerBlockAddition: v.distancePerBlockAddition,
       })),
     };
 
@@ -708,12 +704,21 @@ export function ProductForm({
             {/* Beside tax for the same reason tax sits beside pricing: what a
                 customer pays depends on it, and it belongs to the whole product. */}
             <DeliveryPricingSection
-              value={deliveryPricing}
-              samplePrice={variants[0]?.price || null}
-              sampleCompareAt={variants[0]?.compareAtPrice || null}
-              unitLabel={variants[0]?.unitLabelEn || null}
+              pricingKind={pricingKind}
+              onKindChange={setPricingKind}
+              variants={variants}
+              hasVariants={hasVariants}
               fieldErrors={fieldErrors}
-              onChange={(changes) => setDeliveryPricing((current) => ({ ...current, ...changes }))}
+              onVariantChange={(index, changes) =>
+                index === 0 && !hasVariants
+                  ? updateSingleVariant(changes)
+                  : setVariants((current) =>
+                      current.map((v, i) => (i === index ? { ...v, ...changes } : v)),
+                    )
+              }
+              onAllVariantsChange={(changes) =>
+                setVariants((current) => current.map((v) => ({ ...v, ...changes })))
+              }
             />
 
             {!hasVariants && (
