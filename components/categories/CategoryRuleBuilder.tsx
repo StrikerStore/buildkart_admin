@@ -6,11 +6,13 @@ import { PlusIcon, XIcon, LoaderCircleIcon, FilterIcon } from 'lucide-react';
 import {
   describeTagRules,
   isRunnableRuleSet,
+  slugify,
   type CategoryMatch,
   type TagSlugRule,
   type TagRuleOperator,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -24,6 +26,7 @@ import {
   previewCategoryMembership,
   type MembershipRow,
 } from '@/app/(dashboard)/categories/preview';
+import { createRuleTag } from '@/app/(dashboard)/categories/actions';
 
 export type RuleTagOption = {
   id: string;
@@ -61,9 +64,18 @@ export function CategoryRuleBuilder({
   } | null>(null);
   const [isLoading, startLoading] = useTransition();
 
+  /*
+   * The options grow when a tag is created here. Kept locally rather than via a
+   * refresh, which would re-render the page but not the half-filled form.
+   */
+  const [tagOptions, setTagOptions] = useState(tags);
+  const [newTagName, setNewTagName] = useState('');
+  const [newTagError, setNewTagError] = useState<string | null>(null);
+  const [isCreatingTag, startCreatingTag] = useTransition();
+
   const nameOf = useCallback(
-    (slug: string) => tags.find((t) => t.slug === slug)?.nameEn ?? 'unknown tag',
-    [tags],
+    (slug: string) => tagOptions.find((t) => t.slug === slug)?.nameEn ?? 'unknown tag',
+    [tagOptions],
   );
 
   const rulesKey = JSON.stringify(rules) + match;
@@ -86,9 +98,60 @@ export function CategoryRuleBuilder({
   }, [rulesKey, categoryId]);
 
   function addRule(operator: TagRuleOperator) {
-    const next = tags.find((t) => !isTaken(t.slug, operator));
+    const next = tagOptions.find((t) => !isTaken(t.slug, operator));
     if (!next) return;
     onRulesChange([...rules, { tagSlug: next.slug, operator }]);
+  }
+
+  function includeTag(slug: string) {
+    if (!isTaken(slug, 'INCLUDES')) {
+      onRulesChange([...rules, { tagSlug: slug, operator: 'INCLUDES' }]);
+    }
+  }
+
+  /**
+   * A rule can name a tag before any product carries it, so a category can be
+   * set up first and filled as products are tagged. A name that slugs to an
+   * existing tag reuses it: creating it again would mint a suffixed twin that
+   * the product form's tag input would never match.
+   */
+  function createAndIncludeTag() {
+    const name = newTagName.trim();
+    if (!name) return;
+    setNewTagError(null);
+
+    const slug = slugify(name);
+    const existing = tagOptions.find(
+      (t) => t.slug === slug || t.nameEn.toLowerCase() === name.toLowerCase(),
+    );
+    if (existing) {
+      includeTag(existing.slug);
+      setNewTagName('');
+      return;
+    }
+
+    startCreatingTag(async () => {
+      const result = await createRuleTag(name);
+      if (!result.ok) {
+        setNewTagError(
+          result.fieldErrors.nameEn ??
+            result.fieldErrors.slug ??
+            result.formErrors[0] ??
+            'Could not create this tag.',
+        );
+        return;
+      }
+      const tag = result.data;
+      setTagOptions((prev) =>
+        [...prev, tag].sort(
+          (a, b) =>
+            (a.scope === b.scope ? 0 : a.scope === 'PUBLIC' ? -1 : 1) ||
+            a.nameEn.localeCompare(b.nameEn),
+        ),
+      );
+      includeTag(tag.slug);
+      setNewTagName('');
+    });
   }
 
   /** Whether a (tag, operator) pair is already a condition. */
@@ -126,10 +189,9 @@ export function CategoryRuleBuilder({
         </p>
       </div>
 
-      {tags.length === 0 ? (
+      {tagOptions.length === 0 ? (
         <p className="text-muted-foreground text-xs">
-          No tags exist yet. <Link href="/tags/new" className="underline">Create a tag</Link> to
-          build a rule.
+          No tags exist yet. Create one below to build a rule.
         </p>
       ) : (
         <>
@@ -173,7 +235,7 @@ export function CategoryRuleBuilder({
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {tags.map((tag) => (
+                      {tagOptions.map((tag) => (
                         <SelectItem key={tag.id} value={tag.slug}>
                           {tag.nameEn}
                           {tag.scope === 'INTERNAL' ? ' · internal' : ''}
@@ -230,6 +292,59 @@ export function CategoryRuleBuilder({
           )}
         </>
       )}
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="newRuleTag">New tag</Label>
+        <div className="flex items-center gap-2">
+          <Input
+            id="newRuleTag"
+            value={newTagName}
+            onChange={(e) => {
+              setNewTagName(e.target.value);
+              setNewTagError(null);
+            }}
+            onKeyDown={(e) => {
+              // This sits inside the category form; Enter must create the tag,
+              // not save the category.
+              if (e.key === 'Enter') {
+                e.preventDefault();
+                createAndIncludeTag();
+              }
+            }}
+            placeholder="e.g. Waterproof"
+            maxLength={191}
+            disabled={isCreatingTag}
+            aria-invalid={newTagError ? true : undefined}
+            className="max-w-[280px]"
+          />
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={createAndIncludeTag}
+            disabled={isCreatingTag || newTagName.trim() === ''}
+          >
+            {isCreatingTag ? (
+              <LoaderCircleIcon className="size-4 animate-spin" />
+            ) : (
+              <PlusIcon className="size-4" />
+            )}
+            Create and include
+          </Button>
+        </div>
+        {newTagError ? (
+          <p className="text-destructive text-xs">{newTagError}</p>
+        ) : (
+          <p className="text-muted-foreground text-xs">
+            For a tag no product carries yet. Products tagged with it later join this category
+            automatically. Edit its scope or badge on the{' '}
+            <Link href="/tags" className="underline">
+              Tags
+            </Link>{' '}
+            page.
+          </p>
+        )}
+      </div>
 
       <div className="flex flex-col gap-2 border-t pt-4">
         <div className="flex items-center justify-between gap-2">
