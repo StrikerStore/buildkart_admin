@@ -4,10 +4,10 @@ import { useState } from 'react';
 import Link from 'next/link';
 import {
   addMoney,
-  compareMoney,
   distanceAdditionFor,
   formatINR,
   isMoneyString,
+  shiftMrp,
   type DistanceParams,
   type PricingKind,
   type VariantDraft,
@@ -50,13 +50,18 @@ function paramsOf(figures: DistanceFigures): DistanceParams | null {
   return { baseAddition: base, blockKm, perBlockAddition: perBlock };
 }
 
-/** The price at a distance, worked by the same rule the cart charges by. */
+/**
+ * The price and MRP at a distance, worked by the same rules the cart and the
+ * storefront use: the MRP rises by the same addition as the price.
+ */
 function priceAt(variant: VariantDraft, params: DistanceParams, km: number) {
   const addition = distanceAdditionFor(Math.round(km * 1000), params);
   const price = isMoneyString(variant.price.trim())
     ? addMoney(variant.price.trim(), addition)
     : null;
-  return { addition, price };
+  const mrpValue = variant.compareAtPrice.trim();
+  const mrp = isMoneyString(mrpValue) ? shiftMrp(mrpValue, addition) : null;
+  return { addition, price, mrp };
 }
 
 const nothingAdded = (variant: VariantDraft) => {
@@ -146,16 +151,6 @@ export function DeliveryPricingSection({
   const single = variants[0];
   const singleParams = single ? paramsOf(single) : null;
   const unset = distance ? variants.filter(nothingAdded) : [];
-  // The first variant whose far price passes its own MRP, for the warning.
-  const overMrp = distance
-    ? variants.find((variant) => {
-        const params = paramsOf(variant);
-        const mrp = variant.compareAtPrice.trim();
-        if (!params || !isMoneyString(mrp)) return false;
-        const { price } = priceAt(variant, params, 25);
-        return price !== null && compareMoney(price, mrp) > 0;
-      })
-    : undefined;
 
   return (
     <section className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]">
@@ -201,7 +196,9 @@ export function DeliveryPricingSection({
                 inputMode="decimal"
                 className="tabular"
               />
-              <span className="text-muted-foreground text-xs">Per unit, at any distance.</span>
+              <span className="text-muted-foreground text-xs">
+                Per unit. Covers the first {single?.distanceBlockKm.trim() || '…'} km.
+              </span>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="distance-0-block">Every (km)</Label>
@@ -212,7 +209,9 @@ export function DeliveryPricingSection({
                 inputMode="decimal"
                 className="tabular"
               />
-              <span className="text-muted-foreground text-xs">Each block started counts.</span>
+              <span className="text-muted-foreground text-xs">
+                Each further block started adds.
+              </span>
             </div>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="distance-0-per-block">Adds (₹)</Label>
@@ -223,7 +222,9 @@ export function DeliveryPricingSection({
                 inputMode="decimal"
                 className="tabular"
               />
-              <span className="text-muted-foreground text-xs">Per unit, per block.</span>
+              <span className="text-muted-foreground text-xs">
+                Per unit, per block after the first.
+              </span>
             </div>
           </div>
 
@@ -257,6 +258,16 @@ export function DeliveryPricingSection({
                       {PREVIEW_KM.map((km) => (
                         <td key={km} className="px-2 py-1 text-right font-medium">
                           {formatINR(priceAt(single, singleParams, km).price!)}
+                        </td>
+                      ))}
+                    </tr>
+                  )}
+                  {isMoneyString(single.compareAtPrice.trim()) && (
+                    <tr>
+                      <td className="text-muted-foreground py-1 pr-3 text-xs">MRP</td>
+                      {PREVIEW_KM.map((km) => (
+                        <td key={km} className="text-muted-foreground px-2 py-1 text-right">
+                          {formatINR(priceAt(single, singleParams, km).mrp!)}
                         </td>
                       ))}
                     </tr>
@@ -352,6 +363,11 @@ export function DeliveryPricingSection({
                               : at.price !== null
                                 ? formatINR(at.price)
                                 : `+${formatINR(at.addition)}`}
+                            {at?.mrp && (
+                              <span className="text-muted-foreground block text-xs">
+                                MRP {formatINR(at.mrp)}
+                              </span>
+                            )}
                           </td>
                         );
                       })}
@@ -371,23 +387,17 @@ export function DeliveryPricingSection({
           )}
 
           <p className="text-muted-foreground text-xs">
-            Measured by road (estimated) from the nearest warehouse that stocks the variant. Bulk
-            prices get the same addition. A customer who has not set their location sees the 0 km
-            price as a &ldquo;from&rdquo; price.
+            The base covers the first block (0 km up to &ldquo;Every&rdquo;); each further block
+            started adds &ldquo;Adds&rdquo;. Measured by road (estimated) from the nearest warehouse
+            that stocks the variant. Bulk prices and the MRP shown rise by the same amount, so the
+            saving stays the same. A customer who has not set their location sees the 0 km price as
+            a &ldquo;from&rdquo; price.
           </p>
 
           {unset.length > 0 && (
             <p className="rounded-md bg-[var(--warning-bg)] px-3 py-2 text-xs text-[var(--warning-fg)]">
               Nothing is added for distance on {unset.map(labelOf).join(', ')} — those sell at the
               same price however far they go, with free delivery.
-            </p>
-          )}
-
-          {overMrp && (
-            <p className="rounded-md bg-[var(--warning-bg)] px-3 py-2 text-xs text-[var(--warning-fg)]">
-              {labelOf(overMrp)} goes above its MRP of {formatINR(overMrp.compareAtPrice.trim())}{' '}
-              within 25 km. Pre-packed goods must not be sold above their printed MRP — check with
-              your CA before selling it this way.
             </p>
           )}
         </>
