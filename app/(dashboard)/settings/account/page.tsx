@@ -75,7 +75,7 @@ export default async function AccountSettingsPage() {
             <ReadOnly
               label="Signed in"
               value={account.lastLoginAt ? formatStoreDateTime(account.lastLoginAt) : '—'}
-              hint="When this session began. Sessions last a day."
+              hint="When this session began. Sessions last 30 days."
             />
           </div>
 
