@@ -47,10 +47,16 @@ async function navBadges(role: Parameters<typeof can>[0]): Promise<NavBadges> {
     console.error('[nav] could not reach the API for badge counts', error);
     return {};
   }
-  const [support, privacy] = await Promise.all([
+  const [support, enquiries, privacy] = await Promise.all([
     can(role, 'support:read')
       ? client.support.awaitingCount.query().catch((error: unknown) => {
           console.error('[nav] could not read the support count', error);
+          return undefined;
+        })
+      : undefined,
+    can(role, 'support:read')
+      ? client.enquiries.newCount.query().catch((error: unknown) => {
+          console.error('[nav] could not read the enquiries count', error);
           return undefined;
         })
       : undefined,
@@ -63,6 +69,7 @@ async function navBadges(role: Parameters<typeof can>[0]): Promise<NavBadges> {
   ]);
   return {
     ...(support !== undefined ? { support } : {}),
+    ...(enquiries !== undefined ? { enquiries } : {}),
     ...(privacy !== undefined ? { privacy } : {}),
   };
 }

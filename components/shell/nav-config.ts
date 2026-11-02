@@ -1,5 +1,6 @@
 import {
   HouseIcon,
+  InboxIcon,
   ShoppingBagIcon,
   PackageIcon,
   UsersIcon,
@@ -31,7 +32,7 @@ export type NavChild = {
  * sidebar a `{ support: 3 }` map; a key with no entry, or a zero, renders
  * nothing — a badge showing "0" is a worse answer than no badge.
  */
-export type NavBadgeKey = 'support' | 'privacy';
+export type NavBadgeKey = 'support' | 'enquiries' | 'privacy';
 
 export type NavItem = {
   label: string;
@@ -93,6 +94,7 @@ export const NAV_ITEMS: NavItem[] = [
       { label: 'Categories', href: '/categories' },
       { label: 'Tags', href: '/tags' },
       { label: 'Custom fields', href: '/metafields' },
+      { label: 'Quote materials', href: '/quote-materials' },
     ],
   },
   { label: 'Media', href: '/media', icon: ImageIcon },
@@ -127,6 +129,12 @@ export const NAV_ITEMS: NavItem[] = [
    * visits from the screen where they noticed they were retyping something.
    */
   { label: 'Support', href: '/support', icon: LifeBuoyIcon, badgeKey: 'support', permission: 'support:read' },
+  /*
+   * Contact us messages and rate requests from the website. Beside Support
+   * because the same people answer both, and separate because these come from
+   * people with no account, and so no conversation to reply into.
+   */
+  { label: 'Enquiries', href: '/enquiries', icon: InboxIcon, badgeKey: 'enquiries', permission: 'support:read' },
   {
     label: 'Discounts',
     href: '/discounts',
