@@ -19,6 +19,7 @@ import {
   type BulkTierBasis,
   type OptionAxisDraft,
   type PricingKind,
+  type QuoteMaterial,
   type RuleCategoryDto,
   type VariantDraft,
 } from '@StrikerStore/contract';
@@ -51,6 +52,9 @@ import { MetafieldFieldset, type MetafieldDefinitionDto } from './MetafieldField
 import { OptionAxisEditor } from './OptionAxisEditor';
 import { VariantMatrixEditor } from './VariantMatrixEditor';
 import { BulkBasisSelect } from './BulkBasisSelect';
+import { ProductSetupChecklist, SETUP_SECTIONS } from './ProductSetupChecklist';
+import { QuoteMaterialSection } from './QuoteMaterialSection';
+import { WarehouseStockSection } from './WarehouseStockSection';
 import { createProduct, updateProduct, deleteProduct } from '@/app/(dashboard)/products/actions';
 import { duplicateProduct } from '@/app/(dashboard)/products/[id]/variant-actions';
 
@@ -79,12 +83,14 @@ export type ProductFormInitial = {
   taxInclusive: boolean;
   hsnCode: string;
   isRateVolatile: boolean;
+  quoteMaterial: QuoteMaterial | null;
   bulkTierBasis: BulkTierBasis;
   pricingKind: PricingKind;
   searchKeywords: string;
   seoTitle: string;
   seoDescriptionEn: string;
   orderItemCount: number;
+  updatedAt: string | null;
   /** Raw cell text per definition id. */
   metafieldValues: Record<string, string>;
   axes: OptionAxisDraft[];
@@ -101,9 +107,16 @@ export function ProductForm({
   mediaCtx,
   taxRates,
   defaultTaxRateId,
+  warehouses,
+  canEditWarehouseStock,
 }: {
   initial: ProductFormInitial;
-  categories: Array<{ id: string; nameEn: string; parentName: string | null }>;
+  categories: Array<{
+    id: string;
+    nameEn: string;
+    parentName: string | null;
+    isRateVolatile: boolean;
+  }>;
   metafieldDefinitions: MetafieldDefinitionDto[];
   brandSuggestions: string[];
   tagSuggestions: string[];
@@ -111,6 +124,10 @@ export function ProductForm({
   mediaCtx: MediaUrlContext;
   taxRates: TaxRateDto[];
   defaultTaxRateId: string | null;
+  /** Active warehouses, for stock per warehouse. */
+  warehouses: Array<{ id: string; name: string; code: string }>;
+  /** Only an admin with `delivery:write` may change stock per warehouse. */
+  canEditWarehouseStock: boolean;
 }) {
   const router = useRouter();
   const isEdit = initial.id !== null;
@@ -178,6 +195,7 @@ export function ProductForm({
     hsnCode: initial.hsnCode,
   }));
   const [isRateVolatile, setIsRateVolatile] = useState(initial.isRateVolatile);
+  const [quoteMaterial, setQuoteMaterial] = useState<QuoteMaterial | null>(initial.quoteMaterial);
   // The product's kind; the figures it prices by travel on each variant draft.
   const [pricingKind, setPricingKind] = useState<PricingKind>(initial.pricingKind);
   const [bulkTierBasis, setBulkTierBasis] = useState(initial.bulkTierBasis);
@@ -314,6 +332,7 @@ export function ProductForm({
       taken,
     );
 
+    const sendWarehouseStock = canEditWarehouseStock && warehouses.length > 0;
     const payload = {
       nameEn,
       nameHi,
@@ -336,6 +355,8 @@ export function ProductForm({
       taxInclusive: tax.taxInclusive,
       hsnCode: tax.hsnCode,
       isRateVolatile,
+      // The form always says, so None really does take it out of quotes.
+      quoteMaterial,
       bulkTierBasis,
       pricingKind,
       searchKeywords,
@@ -366,6 +387,16 @@ export function ProductForm({
         distanceBaseAddition: v.distanceBaseAddition,
         distanceBlockKm: v.distanceBlockKm,
         distancePerBlockAddition: v.distancePerBlockAddition,
+        // The count this form opened with: the save applies only the change.
+        stockQtyLoaded: v.stockQtyLoaded === null ? null : Number(v.stockQtyLoaded),
+        quoteCoverage: quoteMaterial ? v.quoteCoverage : '',
+        // Only sent by someone allowed to change it, so staff can still save.
+        warehouseStock: sendWarehouseStock
+          ? warehouses.map((warehouse) => ({
+              warehouseId: warehouse.id,
+              quantity: Number(v.warehouseStock[warehouse.id] || 0),
+            }))
+          : undefined,
       })),
     };
 
@@ -384,7 +415,25 @@ export function ProductForm({
         return;
       }
 
-      toast.success(isEdit ? 'Product saved' : 'Product created');
+      toast.success(isEdit ? 'Product saved' : 'Product created. Finish setup on the right.');
+
+      /*
+       * A new product opens its own page, where the setup checklist shows what
+       * is left. It used to return to the list, which hid exactly that.
+       */
+      if (!isEdit && result.data && 'id' in result.data) {
+        router.push(`/products/${result.data.id}`);
+        return;
+      }
+
+      // The stock just saved is the new starting point, so saving again does not
+      // apply the same change twice. The page also remounts the form from the
+      // stored product once it refreshes; this covers the moment before that.
+      setVariants((current) =>
+        current.map((v) =>
+          v.id ? { ...v, stockQtyLoaded: String(Number(v.stockQty || 0)) } : v,
+        ),
+      );
 
       // Only the update path reports deactivations; a create has nothing to
       // remove. Narrowed rather than cast so the union stays honest.
@@ -396,7 +445,6 @@ export function ProductForm({
           `${n} removed variant${n === 1 ? ' was' : 's were'} kept but deactivated, because ${n === 1 ? 'it appears' : 'they appear'} in past orders.`,
         );
       }
-      router.push('/products');
       router.refresh();
     });
   }
@@ -433,6 +481,17 @@ export function ProductForm({
   }
 
   const busy = isSaving || isDeleting || isDuplicating;
+  const category = categories.find((c) => c.id === categoryId) ?? null;
+  // A daily-rate category puts it on Today's Rates whatever its own switch says.
+  const ratesCategory = category?.isRateVolatile ? category.nameEn : null;
+  const onRates = isRateVolatile || ratesCategory !== null;
+  const priceHelp = onRates
+    ? 'This is today’s rate. Change it each day on Today’s Rates.'
+    : undefined;
+  const changeVariant = (index: number, changes: Partial<VariantDraft>) =>
+    index === 0 && !hasVariants
+      ? updateSingleVariant(changes)
+      : setVariants((current) => current.map((v, i) => (i === index ? { ...v, ...changes } : v)));
   const axisNames = usableAxes(axes).map((a) => a.name);
   const single = variants[0] ?? emptyVariantDraft();
   const shelvedCount = Object.keys(shelved).length;
@@ -595,12 +654,18 @@ export function ProductForm({
               </div>
             </section>
 
-            <section className="bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-[var(--shadow-card)]">
+            <section
+              id={SETUP_SECTIONS.images}
+              className="bg-card flex scroll-mt-4 flex-col gap-3 rounded-lg border p-4 shadow-[var(--shadow-card)]"
+            >
               <h2 className="font-semibold">Images</h2>
               <ProductImages value={images} onChange={setImages} ctx={mediaCtx} />
             </section>
 
-            <section className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]">
+            <section
+              id={SETUP_SECTIONS.variants}
+              className="bg-card flex scroll-mt-4 flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]"
+            >
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
                   <h2 className="font-semibold">Variants</h2>
@@ -681,13 +746,16 @@ export function ProductForm({
               after both rather than being welded to the price fields.
             */}
             {!hasVariants && (
-              <PricingSection
-                bulkTierBasis={bulkTierBasis}
-                onBasisChange={changeBasis}
-                variant={single}
-                fieldErrors={fieldErrors}
-                onChange={updateSingleVariant}
-              />
+              <div id={SETUP_SECTIONS.pricing} className="flex scroll-mt-4 flex-col gap-4">
+                <PricingSection
+                  bulkTierBasis={bulkTierBasis}
+                  onBasisChange={changeBasis}
+                  variant={single}
+                  fieldErrors={fieldErrors}
+                  onChange={updateSingleVariant}
+                  priceHelp={priceHelp}
+                />
+              </div>
             )}
 
             {/* Unconditional, unlike the two around it: a product with option
@@ -709,25 +777,46 @@ export function ProductForm({
               variants={variants}
               hasVariants={hasVariants}
               fieldErrors={fieldErrors}
-              onVariantChange={(index, changes) =>
-                index === 0 && !hasVariants
-                  ? updateSingleVariant(changes)
-                  : setVariants((current) =>
-                      current.map((v, i) => (i === index ? { ...v, ...changes } : v)),
-                    )
-              }
+              onVariantChange={changeVariant}
               onAllVariantsChange={(changes) =>
                 setVariants((current) => current.map((v) => ({ ...v, ...changes })))
               }
             />
 
             {!hasVariants && (
-              <InventorySection
-                variant={single}
-                fieldErrors={fieldErrors}
-                onChange={updateSingleVariant}
+              <div id={SETUP_SECTIONS.inventory} className="flex scroll-mt-4 flex-col gap-4">
+                <InventorySection
+                  variant={single}
+                  fieldErrors={fieldErrors}
+                  onChange={updateSingleVariant}
+                />
+              </div>
+            )}
+
+            {warehouses.length > 0 && (
+              <WarehouseStockSection
+                warehouses={warehouses}
+                variants={variants}
+                hasVariants={hasVariants}
+                canEdit={canEditWarehouseStock}
+                onVariantChange={changeVariant}
+                onAllVariantsChange={(change) =>
+                  setVariants((current) => current.map((v) => ({ ...v, ...change(v) })))
+                }
               />
             )}
+
+            <QuoteMaterialSection
+              material={quoteMaterial}
+              onMaterialChange={setQuoteMaterial}
+              variants={variants}
+              hasVariants={hasVariants}
+              productName={nameEn}
+              onVariantChange={changeVariant}
+              onAllVariantsChange={(changes) =>
+                setVariants((current) => current.map((v) => ({ ...v, ...changes })))
+              }
+            />
 
             <MetafieldFieldset
               definitions={metafieldDefinitions}
@@ -783,7 +872,30 @@ export function ProductForm({
           </div>
 
           <div className="flex flex-col gap-4">
-            <section className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]">
+            <ProductSetupChecklist
+              hasVariants={hasVariants}
+              variants={variants}
+              categoryLabel={
+                category
+                  ? category.parentName
+                    ? `${category.parentName} → ${category.nameEn}`
+                    : category.nameEn
+                  : null
+              }
+              alsoIn={gatheredCategories.map((c) => c.nameEn)}
+              imageCount={images.length}
+              status={status}
+              scheduled={scheduledAt !== ''}
+              onRates={onRates}
+              ratesCategory={ratesCategory}
+              warehouses={warehouses}
+              quoteMaterial={quoteMaterial}
+            />
+
+            <section
+              id={SETUP_SECTIONS.status}
+              className="bg-card flex scroll-mt-4 flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]"
+            >
               <div className="flex flex-col gap-1.5">
                 <Label htmlFor="status">Status</Label>
                 <Select
@@ -833,7 +945,10 @@ export function ProductForm({
               )}
             </section>
 
-            <section className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]">
+            <section
+              id={SETUP_SECTIONS.organisation}
+              className="bg-card flex scroll-mt-4 flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]"
+            >
               <h2 className="font-semibold">Organisation</h2>
 
               <div className="flex flex-col gap-1.5">
@@ -894,19 +1009,28 @@ export function ProductForm({
               )}
             </section>
 
-            <section className="bg-card flex flex-col gap-3 rounded-lg border p-4 shadow-[var(--shadow-card)]">
+            <section
+              id={SETUP_SECTIONS.rates}
+              className="bg-card flex scroll-mt-4 flex-col gap-3 rounded-lg border p-4 shadow-[var(--shadow-card)]"
+            >
               <div className="flex items-start justify-between gap-3">
                 <div className="flex flex-col gap-0.5">
                   <Label htmlFor="volatile" className="font-medium">
                     Price changes daily
                   </Label>
                   <p className="text-muted-foreground text-xs">
-                    Adds this to the Today’s Rates screen.
+                    {ratesCategory
+                      ? `On Today’s Rates already, because ${ratesCategory} changes daily.`
+                      : 'Adds this to the Today’s Rates screen.'}
                   </p>
                 </div>
+                {/* Shown on and locked when the category decides: switching the
+                    product's own flag off would change nothing, and saying so
+                    beats a switch that appears to do something it does not. */}
                 <Switch
                   id="volatile"
-                  checked={isRateVolatile}
+                  checked={onRates}
+                  disabled={ratesCategory !== null}
                   onCheckedChange={setIsRateVolatile}
                 />
               </div>

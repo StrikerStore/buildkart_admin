@@ -26,5 +26,7 @@ export default async function EditProductPage({ params }: { params: Promise<{ id
 
   if (!initial) notFound();
 
-  return <ProductForm {...options} initial={initial} />;
+  // Keyed on the save time, so a save remounts the form from what was stored
+  // (new variant ids, the new starting stock) rather than from what was typed.
+  return <ProductForm key={initial.updatedAt ?? initial.id} {...options} initial={initial} />;
 }

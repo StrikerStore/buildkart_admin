@@ -76,6 +76,8 @@ type SingleVariantProps = {
 type PricingProps = SingleVariantProps & {
   bulkTierBasis: BulkTierBasis;
   onBasisChange: (next: BulkTierBasis) => void;
+  /** Under the price: e.g. that it is today's rate. */
+  priceHelp?: string;
 };
 
 /**
@@ -94,6 +96,7 @@ export function PricingSection({
   bulkTierBasis,
   onBasisChange,
   fieldErrors,
+  priceHelp,
 }: PricingProps) {
   const validPrice = MONEY_PATTERN.test(variant.price);
   const validCost = MONEY_PATTERN.test(variant.costPerItem);
@@ -119,6 +122,7 @@ export function PricingSection({
             value={variant.price}
             onChange={(v) => onChange({ price: v })}
             error={fieldErrors.variants}
+            help={priceHelp}
           />
           <MoneyInput
             id="compareAt"

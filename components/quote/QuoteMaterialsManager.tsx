@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useTransition } from 'react';
+import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import { ArrowUpIcon, PlusIcon, Trash2Icon } from 'lucide-react';
@@ -113,7 +114,12 @@ function MaterialCard({
           {options.map((row, index) => (
             <li key={row.id} className="flex items-center gap-2 px-2.5 py-2">
               <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium">{row.label}</span>
+                <Link
+                  href={`/products/${row.productId}#setup-quote`}
+                  className="block truncate font-medium hover:underline"
+                >
+                  {row.label}
+                </Link>
                 <span className="text-muted-foreground block text-xs">
                   One {row.unitLabel ? row.unitLabel.replace(/^per /, '') : 'unit'} covers{' '}
                   {row.baseUnitsPerSaleUnit} {unit}
