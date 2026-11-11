@@ -6,6 +6,7 @@ import { StatTile } from '@/components/dashboard/StatTile';
 import { RankedBars } from '@/components/dashboard/RankedBars';
 import { AnalyticsCard, AnalyticsShell } from '@/components/analytics/AnalyticsShell';
 import { CsvButton } from '@/components/analytics/CsvButton';
+import { LiveNow } from '@/components/analytics/LiveNow';
 import { SeriesChart } from '@/components/analytics/SeriesChart';
 import {
   Table,
@@ -44,6 +45,9 @@ export default async function AnalyticsOverviewPage({
 
   return (
     <AnalyticsShell active="/analytics" query={query} period={period} note="sessions update hourly">
+      {/* Live, from the raw sessions; everything below follows the chosen period. */}
+      <LiveNow />
+
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Sessions"
