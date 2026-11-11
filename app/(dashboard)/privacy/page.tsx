@@ -37,23 +37,24 @@ function deadline(row: PrivacyRequestRowDto, responseDays: number, now: number) 
 }
 
 /**
- * When `/cron/privacy` last finished. It is the job that carries out deletions
- * after their cooling-off week and enforces every retention period the Privacy
- * Notice promises — and it fails silently by never running, so the queue says
- * so when it has not.
+ * When the privacy clean-up last finished. It is the job that carries out
+ * deletions after their cooling-off week and enforces every retention period
+ * the Privacy Notice promises — and it fails silently by never running, so the
+ * queue says so when it has not. The API runs it nightly at 02:00 on its own
+ * scheduler; a gap means the API log has the reason.
  */
 function cleanupNote(lastCleanupAt: string | null, now: number) {
   if (!lastCleanupAt) {
     return {
       tone: 'warning' as const,
-      text: 'The daily privacy clean-up has never run. Point a daily Railway cron at /cron/privacy — until it runs, confirmed account deletions and the retention periods in the Privacy Notice do not happen.',
+      text: 'The daily privacy clean-up has never run. The API runs it every night at 2:00 AM — if this stays after tonight, look for "[cron] privacy" in the API log on Railway. Until it runs, confirmed account deletions and the retention periods in the Privacy Notice do not happen.',
     };
   }
   const stale = now - Date.parse(lastCleanupAt) > 36 * 60 * 60 * 1000;
   return stale
     ? {
         tone: 'warning' as const,
-        text: `The daily privacy clean-up last ran ${formatStoreDateTimeShort(lastCleanupAt)}. Check the /cron/privacy cron on Railway.`,
+        text: `The daily privacy clean-up last ran ${formatStoreDateTimeShort(lastCleanupAt)}. Look for "[cron] privacy" in the API log on Railway for the reason.`,
       }
     : { tone: 'muted' as const, text: `Daily privacy clean-up last ran ${formatStoreDateTimeShort(lastCleanupAt)}.` };
 }
