@@ -15,13 +15,6 @@ import {
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { saveCheckoutLocation } from '@/app/(dashboard)/checkout/actions';
 import { Card, SaveBar, Toggle, TranslatedField } from './shared';
 import { cn } from '@/lib/utils';

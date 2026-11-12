@@ -18,7 +18,6 @@ import {
   type CheckoutStep,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
 import {
   Select,
   SelectContent,

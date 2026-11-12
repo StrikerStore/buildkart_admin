@@ -1,5 +1,4 @@
 import type { Metadata } from 'next';
-import { api } from '@/lib/api/server';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { NewOrderForm } from '@/components/orders/NewOrderForm';
 import { requirePermission } from '@/lib/auth/requireAdmin';
@@ -15,8 +14,6 @@ export const metadata: Metadata = { title: 'New order' };
  */
 export default async function NewOrderPage() {
   await requirePermission('orders:write');
-
-  const { commerce } = await (await api()).content.settings.query();
 
   return (
     <PageContainer>

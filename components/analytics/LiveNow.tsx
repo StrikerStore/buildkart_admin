@@ -29,7 +29,8 @@ const steps: Array<{ key: keyof LiveFunnel; label: string }> = [
 
 /**
  * Who is on the storefront right now, and today so far, read from the raw
- * sessions rather than the hourly summary the rest of this page uses.
+ * sessions and refreshed every few seconds; the rest of the page is as of
+ * when it loaded.
  *
  * Right to within about a minute: the storefront says "still here" every 30
  * seconds while a tab is visible. Only shoppers who allowed analytics on the

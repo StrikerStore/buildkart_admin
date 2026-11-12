@@ -204,7 +204,7 @@ export function PricingSection({
  * Stock, SKU and the out-of-stock policy for a product with no option axes.
  * Rendered after tax, so the left column reads: pricing, tax, inventory.
  */
-export function InventorySection({ variant, onChange, fieldErrors }: SingleVariantProps) {
+export function InventorySection({ variant, onChange }: SingleVariantProps) {
   return (
     <>
       <section className="bg-card flex flex-col gap-4 rounded-lg border p-4 shadow-[var(--shadow-card)]">

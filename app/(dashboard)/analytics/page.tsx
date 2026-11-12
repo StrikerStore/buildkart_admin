@@ -27,9 +27,13 @@ const inr = (value: string | null) => (value === null ? '—' : formatINR(value)
 /**
  * Shopify-style store analytics: the overview.
  *
- * Sessions come from the storefront's own beacon and are summarised hourly, so
- * they can be up to an hour behind; orders and revenue are live and use the
- * Home dashboard's rule (everything not cancelled), so the two pages agree.
+ * Everything here is live. Sessions come from the storefront's own beacon,
+ * counted straight from the raw sessions for the last 90 days (the daily
+ * summary only covers older history), and are the visitors who allowed
+ * analytics. "All visits" adds the anonymous count of everyone else — a bare
+ * number per kind of device, with no source, city or funnel behind it.
+ * Orders and revenue use the Home dashboard's rule (everything not cancelled),
+ * so the two pages agree.
  */
 export default async function AnalyticsOverviewPage({
   searchParams,
@@ -44,17 +48,24 @@ export default async function AnalyticsOverviewPage({
   const period = { range: data.range, from: data.from, to: data.to, days: data.daily.length };
 
   return (
-    <AnalyticsShell active="/analytics" query={query} period={period} note="sessions update hourly">
+    <AnalyticsShell active="/analytics" query={query} period={period}>
       {/* Live, from the raw sessions; everything below follows the chosen period. */}
       <LiveNow />
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+        <StatTile
+          label="All visits"
+          value={data.visits.value.toLocaleString('en-IN')}
+          change={data.visits.change}
+          comparison={comparison}
+          footnote={`${data.anonymousVisits.value.toLocaleString('en-IN')} counted anonymously, without analytics consent`}
+        />
         <StatTile
           label="Sessions"
           value={data.sessions.value.toLocaleString('en-IN')}
           change={data.sessions.change}
           comparison={comparison}
-          footnote={`${percent(data.returningRate, 0)} returning visitors`}
+          footnote={`Allowed analytics · ${percent(data.returningRate, 0)} returning`}
         />
         <StatTile
           label="Conversion rate"
@@ -80,11 +91,17 @@ export default async function AnalyticsOverviewPage({
       {/* Two charts, not one with two axes: sessions and conversion rate share
           the days but not a scale. */}
       <div className="grid gap-4 lg:grid-cols-2">
-        <AnalyticsCard title="Sessions per day">
+        <AnalyticsCard
+          title="Visits per day"
+          subtitle="Sessions plus the visits counted anonymously."
+        >
           <SeriesChart
-            points={data.daily.map((point) => ({ day: point.day, value: point.sessions }))}
+            points={data.daily.map((point) => ({
+              day: point.day,
+              value: point.sessions + point.anonymousVisits,
+            }))}
             format="count"
-            unit="session"
+            unit="visit"
             color="--chart-2"
           />
         </AnalyticsCard>
@@ -106,7 +123,7 @@ export default async function AnalyticsOverviewPage({
       <div className="grid gap-4 lg:grid-cols-2">
         <AnalyticsCard
           title="Conversion funnel"
-          subtitle="Sessions that got at least this far. Each bar is a share of all sessions."
+          subtitle="Sessions that got at least this far. Each bar is a share of all sessions. Only visitors who allowed analytics are followed."
         >
           <RankedBars
             rows={data.funnel.map((step) => ({
