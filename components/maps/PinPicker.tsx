@@ -117,6 +117,9 @@ export function PinPicker({ apiKey, value, fallback, onChange }: PinPickerProps)
     if (point === reported.current) return;
     target.current = point;
     map.current.panTo(value);
+    // A place picked from a city-wide view should land at street level, where
+    // the pin can actually be put on a gate.
+    if ((map.current.getZoom() ?? 0) < 15) map.current.setZoom(17);
   }, [value?.lat, value?.lng]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (status === 'failed') {

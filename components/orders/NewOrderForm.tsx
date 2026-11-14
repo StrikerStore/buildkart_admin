@@ -48,10 +48,14 @@ import {
   createOrder,
   lookupCustomer,
   lookupPincode,
+  quoteDistance,
   searchVariants,
   type CustomerLookupResult,
+  type DistanceQuote,
   type VariantSearchResult,
 } from '@/app/(dashboard)/orders/new/actions';
+import { DeliveryPin, type Pin } from '@/components/orders/DeliveryPin';
+import type { AdminMap } from '@/lib/maps';
 import { cn } from '@/lib/utils';
 
 type Line = { variant: VariantSearchResult; quantity: number; override: string };
@@ -90,7 +94,15 @@ function Field({
   );
 }
 
-export function NewOrderForm() {
+/** A saved coordinate, as the lookup sends it, or null when either half is missing. */
+function pinOf(latitude: string | null, longitude: string | null): Pin | null {
+  if (latitude === null || longitude === null) return null;
+  const lat = Number(latitude);
+  const lng = Number(longitude);
+  return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
+}
+
+export function NewOrderForm({ map }: { map: AdminMap }) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -112,6 +124,10 @@ export function NewOrderForm() {
   });
   const [saveAddress, setSaveAddress] = useState(true);
   const [areaNote, setAreaNote] = useState<string | null>(null);
+  /** Where the goods go. What distance pricing and the delivery charge are measured to. */
+  const [pin, setPin] = useState<Pin | null>(null);
+  /** The pin's effect on the current items, tagged with what it was asked for. */
+  const [quote, setQuote] = useState<{ key: string; data: DistanceQuote } | null>(null);
 
   // --- items ---------------------------------------------------------------
   const [lines, setLines] = useState<Line[]>([]);
@@ -184,6 +200,41 @@ export function NewOrderForm() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [address.pincode]);
 
+  /*
+   * The pin's prices, from the server's own routing: which warehouse each item
+   * ships from and how far that is by road. Asked again whenever the pin or the
+   * set of items changes. Quantities do not move a distance, so they are not
+   * part of the key.
+   */
+  const variantIds = useMemo(
+    () => [...new Set(lines.map((line) => line.variant.variantId))].sort(),
+    [lines],
+  );
+  const quoteKey =
+    pin && variantIds.length > 0
+      ? `${pin.lat.toFixed(7)},${pin.lng.toFixed(7)}|${variantIds.join(',')}`
+      : null;
+
+  useEffect(() => {
+    if (!pin || quoteKey === null) return;
+    const key = quoteKey;
+    const timer = setTimeout(async () => {
+      const result = await quoteDistance({
+        latitude: pin.lat,
+        longitude: pin.lng,
+        variantIds,
+      });
+      if (result.ok) setQuote({ key, data: result.data });
+    }, 300);
+    return () => clearTimeout(timer);
+    // `quoteKey` already covers the pin and the items.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [quoteKey]);
+
+  /** The quote for exactly this pin and these items, never an older one. */
+  const distance = quoteKey !== null && quote?.key === quoteKey ? quote.data : null;
+  const distancePending = quoteKey !== null && distance === null;
+
   useEffect(() => {
     const timer = setTimeout(async () => {
       setSearching(true);
@@ -195,14 +246,19 @@ export function NewOrderForm() {
   }, [search]);
 
   /*
-   * The counter has no map pin, so a distance-priced product is shown at its
-   * warehouse-gate price (0 km) — what the server will charge too — and the
-   * operator types a rate for a far delivery. A blank delivery charge is the
-   * shop's rule, worked out the way the server will: the flat-priced lines, at
-   * 0 km, in an area the shop delivers to.
+   * With a pin, a distance-priced product carries what the server's routing
+   * says the distance adds, and the delivery charge is measured to the pin:
+   * both exactly what `createOrder` will charge. Without one, everything is at
+   * its warehouse-gate price (0 km), and the operator types a rate for a far
+   * delivery. A blank delivery charge is the shop's rule, worked out the way the
+   * server will: the flat-priced lines, in an area the shop delivers to.
+   *
+   * While the pin's quote is on its way there is no figure at all, rather than
+   * the 0 km one: a total read out on the phone has to be the real one.
    */
   const shopRule = useMemo(() => {
-    if (lines.length === 0) return null;
+    if (lines.length === 0 || distancePending) return null;
+    const additionOf = new Map(distance?.lines.map((row) => [row.variantId, row.addition]) ?? []);
     try {
       const orderLines = lines.map((line) => ({
         variantId: line.variant.variantId,
@@ -221,11 +277,12 @@ export function NewOrderForm() {
         taxable: line.variant.taxable,
         distanceAddition:
           line.variant.pricingKind === 'DISTANCE'
-            ? distanceAdditionFor(0, {
+            ? (additionOf.get(line.variant.variantId) ??
+              distanceAdditionFor(0, {
                 baseAddition: line.variant.distanceBaseAddition,
                 blockKm: line.variant.distanceBlockKm,
                 perBlockAddition: line.variant.distancePerBlockAddition,
-              })
+              }))
             : '0.00',
       }));
       const discount = discountTotal.trim() === '' ? undefined : discountTotal.trim();
@@ -235,7 +292,7 @@ export function NewOrderForm() {
         rules && hasFlat
           ? deliveryFeeFor({
               cartTotal: subtractMoney(probe.subtotal, discount ?? '0.00'),
-              metres: 0,
+              metres: distance?.delivery.metres ?? 0,
               rules,
             }).charge
           : '0.00';
@@ -243,7 +300,7 @@ export function NewOrderForm() {
     } catch {
       return null;
     }
-  }, [lines, discountTotal, rules]);
+  }, [lines, discountTotal, rules, distance, distancePending]);
 
   /*
    * Priced with the very same function the server uses, so the total on screen
@@ -263,6 +320,18 @@ export function NewOrderForm() {
       return null;
     }
   }, [shopRule, deliveryCharge]);
+
+  /** What the line's price is measured on, under a distance-priced item. */
+  function distanceNote(variantId: string): string {
+    if (!pin) {
+      return 'Priced by distance. This is the 0 km rate: pin the delivery location, or type a rate.';
+    }
+    if (!distance) return 'Priced by distance. Working out the distance…';
+    const row = distance.lines.find((r) => r.variantId === variantId);
+    if (!row) return 'Priced by distance.';
+    const from = row.warehouseCode ? ` from ${row.warehouseCode}` : '';
+    return `Priced by distance: ${row.roadKm} km by road${from}.`;
+  }
 
   function addLine(variant: VariantSearchResult) {
     setLines((current) => {
@@ -286,7 +355,9 @@ export function NewOrderForm() {
     startSaving(async () => {
       const result = await createOrder({
         customer: { phone, name },
-        address,
+        // The pin goes with the address: the order prices from it, the driver
+        // navigates to it, and a saved address keeps it for next time.
+        address: pin ? { ...address, latitude: pin.lat, longitude: pin.lng } : address,
         saveAddress,
         lines: lines.map((line) => ({
           variantId: line.variant.variantId,
@@ -321,7 +392,9 @@ export function NewOrderForm() {
     });
   }
 
-  const canSubmit = lines.length > 0 && phone.trim() !== '' && address.line1.trim() !== '';
+  // Not while the pin's prices are still arriving: the button shows the total.
+  const canSubmit =
+    lines.length > 0 && phone.trim() !== '' && address.line1.trim() !== '' && !distancePending;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -420,7 +493,7 @@ export function NewOrderForm() {
                       )}
                       {line.variant.pricingKind === 'DISTANCE' && line.override.trim() === '' && (
                         <span className="text-muted-foreground block text-xs">
-                          Priced by distance — this is the 0 km rate. Type a rate for a far delivery.
+                          {distanceNote(line.variant.variantId)}
                         </span>
                       )}
                     </span>
@@ -535,6 +608,9 @@ export function NewOrderForm() {
                             state: saved.state,
                             pincode: saved.pincode,
                           });
+                          // Its pin comes with it; an old address without one
+                          // clears any pin dropped for a different place.
+                          setPin(pinOf(saved.latitude, saved.longitude));
                           // Already on file; saving it again would only duplicate.
                           setSaveAddress(false);
                         }}
@@ -602,6 +678,8 @@ export function NewOrderForm() {
           </div>
 
           {areaNote && <p className="text-muted-foreground text-xs">{areaNote}</p>}
+
+          <DeliveryPin map={map} value={pin} onChange={setPin} />
 
           <label className="flex items-center gap-2 text-xs">
             <Checkbox
@@ -684,7 +762,12 @@ export function NewOrderForm() {
               {deliveryCharge.trim() === '' && shopRule && (
                 <span className="text-muted-foreground text-xs">
                   Shop rule: {shopRule.fee === '0.00' ? 'free' : formatINR(shopRule.fee)}
-                  {rules ? ', measured at 0 km' : ''}. Type a figure to charge something else.
+                  {rules
+                    ? distance
+                      ? `, measured to the pin (${distance.delivery.roadKm} km by road)`
+                      : ', measured at 0 km'
+                    : ''}
+                  . Type a figure to charge something else.
                 </span>
               )}
             </Field>
@@ -697,6 +780,13 @@ export function NewOrderForm() {
                 <span className="text-muted-foreground">GST</span>
                 <span className="tabular">{formatINR(preview.taxAddedTotal)}</span>
               </div>
+            )}
+
+            {distancePending && (
+              <p className="text-muted-foreground flex items-center gap-1.5 text-xs">
+                <LoaderCircleIcon className="size-3.5 animate-spin" />
+                Pricing for the pinned location…
+              </p>
             )}
 
             <div className="mt-1 flex justify-between border-t pt-2 text-base font-semibold">

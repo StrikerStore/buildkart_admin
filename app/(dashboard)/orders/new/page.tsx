@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import { PageContainer, PageHeader } from '@/components/shell/PageHeader';
 import { NewOrderForm } from '@/components/orders/NewOrderForm';
 import { requirePermission } from '@/lib/auth/requireAdmin';
+import { adminMap } from '@/lib/maps';
 
 export const metadata: Metadata = { title: 'New order' };
 
@@ -14,6 +15,7 @@ export const metadata: Metadata = { title: 'New order' };
  */
 export default async function NewOrderPage() {
   await requirePermission('orders:write');
+  const map = await adminMap();
 
   return (
     <PageContainer>
@@ -23,7 +25,7 @@ export default async function NewOrderPage() {
         backLabel="Orders"
         subtitle="For an order taken over the phone or at the counter."
       />
-      <NewOrderForm />
+      <NewOrderForm map={map} />
     </PageContainer>
   );
 }
