@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useMemo, useState, useTransition } from 'react';
+import { useEffect, useMemo, useRef, useState, useTransition } from 'react';
 import { useRouter } from 'next/navigation';
 import {
   CheckCircle2Icon,
@@ -30,6 +30,7 @@ import {
   type PaymentGateway,
   type PaymentMethod,
   isValidIndianMobile,
+  MONEY_PATTERN,
   normalizeIndianMobile,
 } from '@StrikerStore/contract';
 import { Button } from '@/components/ui/button';
@@ -59,6 +60,26 @@ import type { AdminMap } from '@/lib/maps';
 import { cn } from '@/lib/utils';
 
 type Line = { variant: VariantSearchResult; quantity: number; override: string };
+
+/** Something not in the catalogue, typed in at the counter. */
+type CustomLine = {
+  key: number;
+  name: string;
+  unitLabel: string;
+  quantity: number;
+  rate: string;
+  /** A rate's percent as the tax settings write it, e.g. "18.00". */
+  taxPercent: string;
+};
+
+type TaxRateOption = { name: string; percent: string };
+
+/**
+ * How a custom line is keyed for pricing — never a variant id, since cuids
+ * have no colon. The server keys them the same way and prices them after the
+ * catalogue lines, so this preview matches it to the paisa.
+ */
+const customKey = (index: number) => `custom:${index}`;
 
 function Card({ title, subtitle, children }: { title: string; subtitle?: string; children: React.ReactNode }) {
   return (
@@ -102,7 +123,15 @@ function pinOf(latitude: string | null, longitude: string | null): Pin | null {
   return Number.isFinite(lat) && Number.isFinite(lng) ? { lat, lng } : null;
 }
 
-export function NewOrderForm({ map }: { map: AdminMap }) {
+export function NewOrderForm({
+  map,
+  taxRates,
+  defaultTaxPercent,
+}: {
+  map: AdminMap;
+  taxRates: TaxRateOption[];
+  defaultTaxPercent: string;
+}) {
   const router = useRouter();
   const [isSaving, startSaving] = useTransition();
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -134,6 +163,18 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
   const [search, setSearch] = useState('');
   const [results, setResults] = useState<VariantSearchResult[]>([]);
   const [searching, setSearching] = useState(false);
+  const [customLines, setCustomLines] = useState<CustomLine[]>([]);
+  const nextCustomKey = useRef(0);
+
+  // Nil-rated is always on offer: a labour or cutting charge often carries none.
+  const taxOptions = useMemo(() => {
+    const options = taxRates.filter(
+      (rate, i) => taxRates.findIndex((other) => other.percent === rate.percent) === i,
+    );
+    return options.some((rate) => Number(rate.percent) === 0)
+      ? options
+      : [{ name: 'No GST (0%)', percent: '0.00' }, ...options];
+  }, [taxRates]);
 
   // --- money ---------------------------------------------------------------
   const [deliveryCharge, setDeliveryCharge] = useState('');
@@ -257,14 +298,20 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
    * the 0 km one: a total read out on the phone has to be the real one.
    */
   const shopRule = useMemo(() => {
-    if (lines.length === 0 || distancePending) return null;
+    if (lines.length + customLines.length === 0 || distancePending) return null;
+    // A custom line has no list price to fall back on, so the summary waits
+    // for its rate the way it waits for a half-typed override.
+    if (customLines.some((line) => !MONEY_PATTERN.test(line.rate.trim()))) return null;
     const additionOf = new Map(distance?.lines.map((row) => [row.variantId, row.addition]) ?? []);
     try {
-      const orderLines = lines.map((line) => ({
-        variantId: line.variant.variantId,
-        quantity: line.quantity,
-        unitPriceOverride: line.override.trim() === '' ? undefined : line.override.trim(),
-      }));
+      const orderLines = [
+        ...lines.map((line) => ({
+          variantId: line.variant.variantId,
+          quantity: line.quantity,
+          unitPriceOverride: line.override.trim() === '' ? undefined : line.override.trim(),
+        })),
+        ...customLines.map((line, index) => ({ variantId: customKey(index), quantity: line.quantity })),
+      ];
       const catalog = lines.map((line) => ({
         variantId: line.variant.variantId,
         price: line.variant.price,
@@ -285,11 +332,25 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
               }))
             : '0.00',
       }));
+      // The typed rate is the list price: no ladder, GST inside it — as the server prices it.
+      customLines.forEach((line, index) => {
+        catalog.push({
+          variantId: customKey(index),
+          price: line.rate.trim(),
+          tiers: [],
+          taxPercent: Number(line.taxPercent) || 0,
+          taxInclusive: true,
+          taxable: true,
+          distanceAddition: '0.00',
+        });
+      });
       const discount = discountTotal.trim() === '' ? undefined : discountTotal.trim();
-      const hasFlat = lines.some((line) => line.variant.pricingKind === 'FLAT');
+      // A custom item is goods to deliver, like a flat-priced product.
+      const needsDelivery =
+        customLines.length > 0 || lines.some((line) => line.variant.pricingKind === 'FLAT');
       const probe = priceOrder(orderLines, catalog, {});
       const fee =
-        rules && hasFlat
+        rules && needsDelivery
           ? deliveryFeeFor({
               cartTotal: subtractMoney(probe.subtotal, discount ?? '0.00'),
               metres: distance?.delivery.metres ?? 0,
@@ -300,7 +361,7 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
     } catch {
       return null;
     }
-  }, [lines, discountTotal, rules, distance, distancePending]);
+  }, [lines, customLines, discountTotal, rules, distance, distancePending]);
 
   /*
    * Priced with the very same function the server uses, so the total on screen
@@ -348,6 +409,20 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
     setSearch('');
   }
 
+  /** Starts a custom line, named after the search when there is one. */
+  function addCustomLine(name: string) {
+    const key = nextCustomKey.current++;
+    setCustomLines((current) => [
+      ...current,
+      { key, name: name.trim(), unitLabel: '', quantity: 1, rate: '', taxPercent: defaultTaxPercent },
+    ]);
+    setSearch('');
+  }
+
+  function updateCustomLine(key: number, patch: Partial<CustomLine>) {
+    setCustomLines((current) => current.map((line) => (line.key === key ? { ...line, ...patch } : line)));
+  }
+
   function submit() {
     setFieldErrors({});
     setFormError(null);
@@ -363,6 +438,13 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
           variantId: line.variant.variantId,
           quantity: line.quantity,
           unitPriceOverride: line.override.trim(),
+        })),
+        customLines: customLines.map((line) => ({
+          name: line.name,
+          quantity: line.quantity,
+          unitPrice: line.rate.trim(),
+          unitLabel: line.unitLabel,
+          taxPercent: line.taxPercent,
         })),
         deliveryCharge,
         discountTotal,
@@ -392,9 +474,16 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
     });
   }
 
+  const customIncomplete = customLines.some(
+    (line) => line.name.trim() === '' || !MONEY_PATTERN.test(line.rate.trim()),
+  );
   // Not while the pin's prices are still arriving: the button shows the total.
   const canSubmit =
-    lines.length > 0 && phone.trim() !== '' && address.line1.trim() !== '' && !distancePending;
+    lines.length + customLines.length > 0 &&
+    !customIncomplete &&
+    phone.trim() !== '' &&
+    address.line1.trim() !== '' &&
+    !distancePending;
 
   return (
     <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_340px]">
@@ -406,15 +495,24 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
           </div>
         )}
 
-        <Card title="Items" subtitle="Search by product name or SKU.">
-          <div className="relative">
-            <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
-            <Input
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              placeholder="Cement, sariya, 8mm…"
-              className="pl-8"
-            />
+        <Card
+          title="Items"
+          subtitle="Search by product name or SKU, or add a custom item that is not in the catalogue."
+        >
+          <div className="flex gap-2">
+            <div className="relative min-w-0 flex-1">
+              <SearchIcon className="text-muted-foreground pointer-events-none absolute top-1/2 left-2.5 size-4 -translate-y-1/2" />
+              <Input
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                placeholder="Cement, sariya, 8mm…"
+                className="pl-8"
+              />
+            </div>
+            <Button type="button" variant="outline" onClick={() => addCustomLine('')}>
+              <PlusIcon className="size-4" />
+              Custom item
+            </Button>
           </div>
 
           {search.trim() !== '' && (
@@ -455,12 +553,26 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
                   </li>
                 );
               })}
+              {/* Kept in view at the foot of a long list: what was typed may
+                  simply not be something the shop has listed. */}
+              <li className="bg-card sticky bottom-0 border-t">
+                <button
+                  type="button"
+                  onClick={() => addCustomLine(search)}
+                  className="hover:bg-muted flex w-full items-center gap-2 px-3 py-2 text-left transition-colors"
+                >
+                  <PlusIcon className="text-muted-foreground size-4 shrink-0" />
+                  <span className="min-w-0 truncate">
+                    Add <span className="font-medium">“{search.trim()}”</span> as a custom item
+                  </span>
+                </button>
+              </li>
             </ul>
           )}
 
-          {lines.length === 0 ? (
+          {lines.length + customLines.length === 0 ? (
             <p className="text-muted-foreground rounded-md border border-dashed px-3 py-6 text-center text-xs">
-              No items yet. Search above to add the first one.
+              No items yet. Search above, or add a custom item.
             </p>
           ) : (
             <ul className="flex flex-col">
@@ -553,7 +665,108 @@ export function NewOrderForm({ map }: { map: AdminMap }) {
                   </li>
                 );
               })}
+
+              {customLines.map((line, index) => {
+                // Priced after the catalogue lines, as the server prices them.
+                const priced = preview?.lines[lines.length + index];
+                const rate = line.rate.trim();
+                const badRate = rate !== '' && !MONEY_PATTERN.test(rate);
+
+                return (
+                  <li
+                    key={`custom-${line.key}`}
+                    className="flex flex-wrap items-start gap-2 border-b py-2.5 last:border-b-0"
+                  >
+                    <span className="flex min-w-[180px] flex-1 flex-col gap-1.5">
+                      <Input
+                        value={line.name}
+                        onChange={(e) => updateCustomLine(line.key, { name: e.target.value })}
+                        placeholder="Item name"
+                        aria-label="Item name"
+                        maxLength={191}
+                        // Mounts once per line, so this only fires as it is added.
+                        autoFocus={line.name === ''}
+                      />
+                      <span className="flex flex-wrap items-center gap-1.5">
+                        <Input
+                          value={line.unitLabel}
+                          onChange={(e) => updateCustomLine(line.key, { unitLabel: e.target.value })}
+                          placeholder="Unit"
+                          aria-label="Unit"
+                          maxLength={32}
+                          className="h-8 w-[80px] text-xs"
+                        />
+                        <Select
+                          value={line.taxPercent}
+                          onValueChange={(value) => updateCustomLine(line.key, { taxPercent: value })}
+                        >
+                          <SelectTrigger size="sm" className="w-[140px] text-xs" aria-label="GST rate">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {taxOptions.map((option) => (
+                              <SelectItem key={option.percent} value={option.percent}>
+                                {option.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <span className="text-muted-foreground text-xs">
+                          Custom · rate includes GST · no stock taken
+                        </span>
+                      </span>
+                    </span>
+
+                    <Input
+                      value={String(line.quantity)}
+                      onChange={(e) =>
+                        updateCustomLine(line.key, {
+                          quantity: Number(e.target.value.replace(/\D/g, '')) || 1,
+                        })
+                      }
+                      inputMode="numeric"
+                      className="tabular w-[72px] text-right"
+                      aria-label="Quantity"
+                    />
+
+                    <Input
+                      value={line.rate}
+                      onChange={(e) => updateCustomLine(line.key, { rate: e.target.value })}
+                      inputMode="decimal"
+                      placeholder="Rate"
+                      className="tabular w-[96px] text-right"
+                      aria-label="Rate"
+                      aria-invalid={badRate || undefined}
+                      autoFocus={line.name !== ''}
+                    />
+
+                    <span className="tabular w-[92px] shrink-0 text-right leading-9 font-medium">
+                      {priced ? formatINR(priced.lineTotal) : '—'}
+                    </span>
+
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setCustomLines((current) => current.filter((l) => l.key !== line.key))
+                      }
+                      className="text-muted-foreground flex h-9 shrink-0 items-center transition-colors hover:text-[var(--critical-fg)]"
+                      aria-label="Remove item"
+                    >
+                      <TrashIcon className="size-4" />
+                    </button>
+                  </li>
+                );
+              })}
             </ul>
+          )}
+
+          {customIncomplete && (
+            <p className="text-muted-foreground text-xs">
+              Give each custom item a name and a rate to create the order.
+            </p>
+          )}
+          {fieldErrors.customLines && (
+            <p className="text-xs text-[var(--critical-fg)]">{fieldErrors.customLines}</p>
           )}
         </Card>
 
